@@ -5,7 +5,6 @@ import { jwtDecode } from 'jwt-decode';
 import Handlebars from 'handlebars/dist/cjs/handlebars';
 import SemverSatisfies from 'semver/functions/satisfies';
 import SemverGt from 'semver/functions/gt';
-import SemverGte from 'semver/functions/gte';
 import SemverMajor from 'semver/functions/major';
 import SemverMinor from 'semver/functions/minor';
 
@@ -76,6 +75,16 @@ function countUniqueHLSViewers(activeSessions = {}) {
 	return viewers.size;
 }
 
+function normalizeNKLReleaseVersion(value) {
+	if (typeof value !== 'string') return null;
+
+	const version = value.trim().replace(/^v/, '');
+	const development = version.match(/^(\d+\.\d+\.\d+)-dev(\d+)$/);
+	if (development) return `${development[1]}-dev.${development[2]}`;
+
+	return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version) ? version : null;
+}
+
 class Restreamer {
 	constructor(address) {
 		try {
@@ -121,6 +130,15 @@ class Restreamer {
 		this.updates = null;
 		this.hasUpdates = false;
 		this.hasService = false;
+		this.updateInfo = {
+			currentVersion: Version.Version,
+			latestVersion: Version.Version,
+			releaseName: '',
+			releaseURL: Version.Releases,
+			publishedAt: '',
+			checkedAt: '',
+			error: '',
+		};
 
 		this._checkForUpdates();
 	}
@@ -3290,6 +3308,67 @@ class Restreamer {
 		return this.hasService;
 	}
 
+	GetUpdateInfo() {
+		return { ...this.updateInfo };
+	}
+
+	async CheckUpdatesNow() {
+		return await this._checkForUpdates();
+	}
+
+	async UpdateAgentStatus() {
+		const [rawStatus, statusError] = await this._call(this.api.DataGetFile, '/nkl-update/agent.json');
+		if (statusError !== null) return { available: false, error: 'agent-unavailable' };
+
+		try {
+			const status = typeof rawStatus === 'string' ? JSON.parse(rawStatus) : rawStatus;
+			if (status?.available !== true) return { available: false, error: 'agent-unavailable' };
+			return status;
+		} catch (error) {
+			return { available: false, error: 'invalid-agent-status' };
+		}
+	}
+
+	async InstallLatestUpdate(expectedVersion) {
+		const agent = await this.UpdateAgentStatus();
+		if (agent.available !== true) return { ok: false, error: agent.error || 'agent-unavailable' };
+
+		const requestId = uuidv4();
+		const requestPath = `/nkl-update/requests/${requestId}.json`;
+		const responsePath = `/nkl-update/responses/${requestId}.json`;
+		const request = JSON.stringify({
+			version: 1,
+			action: 'install-latest-nkl-release',
+			requestId,
+			expectedVersion,
+		});
+
+		const [, requestError] = await this._call(this.api.DataPutFile, requestPath, request);
+		if (requestError !== null) return { ok: false, error: 'request-failed' };
+
+		this.IgnoreAPIErrors(true);
+		try {
+			for (let attempt = 0; attempt < 900; attempt++) {
+				const [rawResponse, responseError] = await this._call(this.api.DataGetFile, responsePath);
+				if (responseError === null) {
+					try {
+						const response = typeof rawResponse === 'string' ? JSON.parse(rawResponse) : rawResponse;
+						if (!response || response.requestId !== requestId) return { ok: false, error: 'invalid-response' };
+						return response;
+					} catch (error) {
+						return { ok: false, error: 'invalid-response' };
+					}
+				}
+				await new Promise((resolve) => window.setTimeout(resolve, 1000));
+			}
+			return { ok: false, error: 'timeout' };
+		} finally {
+			this.IgnoreAPIErrors(false);
+			await this._call(this.api.DataDeleteFile, requestPath);
+			await this._call(this.api.DataDeleteFile, responsePath);
+		}
+	}
+
 	async _checkForUpdates() {
 		if (Storage.Get('updates') !== 'false') {
 			Storage.Set('updates', true);
@@ -3301,70 +3380,38 @@ class Restreamer {
 			return;
 		}
 
-		(async () => {
-			let response = null;
+		try {
+			const response = await fetch(Version.ReleaseAPI, {
+				method: 'GET',
+				headers: { Accept: 'application/vnd.github+json' },
+				cache: 'no-store',
+			});
+			if (response.ok === false) throw new Error(`GitHub returned HTTP ${response.status}`);
 
-			try {
-				response = await fetch('https://service.datarhei.com/api/v1/app_version', {
-					method: 'PUT',
-					headers: {
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify({
-						app_version: Version.UI,
-					}),
-				});
-			} catch (err) {
-				return;
-			}
+			const release = await response.json();
+			const current = normalizeNKLReleaseVersion(Version.Version);
+			const latest = normalizeNKLReleaseVersion(release.tag_name);
+			if (current === null || latest === null) throw new Error('Invalid NKL release version');
 
-			const contentType = response.headers.get('Content-Type');
-			let isJSON = false;
-
-			if (contentType != null) {
-				isJSON = contentType.indexOf('application/json') !== -1;
-			}
-
-			if (isJSON === false) {
-				return;
-			}
-
-			if (response.ok === false) {
-				return;
-			}
-
-			const value = {
-				latest_version: Version.UI,
-				...(await response.json()),
+			this.hasUpdates = SemverGt(latest, current);
+			this.hasService = false;
+			this.updateInfo = {
+				currentVersion: Version.Version,
+				latestVersion: String(release.tag_name).replace(/^v/, ''),
+				releaseName: release.name || '',
+				releaseURL: release.html_url || Version.Releases,
+				publishedAt: release.published_at || '',
+				checkedAt: new Date().toISOString(),
+				error: '',
 			};
-
-			const findVersion = (name) => {
-				const matches = name.match(/v(\d+\.\d+\.\d+)\s*$/);
-				if (matches === null) {
-					return '0.0.0';
-				}
-
-				return matches[1];
+		} catch (error) {
+			this.hasUpdates = false;
+			this.updateInfo = {
+				...this.updateInfo,
+				checkedAt: new Date().toISOString(),
+				error: error.message || 'Update check failed',
 			};
-
-			const currentVersion = findVersion(Version.UI);
-			const announcedVersion = findVersion(value.latest_version);
-
-			if (currentVersion !== '0.0.0') {
-				if (SemverGt(announcedVersion, currentVersion)) {
-					this.hasUpdates = true;
-				} else {
-					this.hasUpdates = false;
-				}
-			}
-
-			const serviceVersion = findVersion(value.service_version);
-			if (SemverGte(serviceVersion, '1.0.0')) {
-				this.hasService = true;
-			} else {
-				this.hasService = false;
-			}
-		})();
+		}
 
 		this.updates = setTimeout(
 			() => {
@@ -3372,6 +3419,8 @@ class Restreamer {
 			},
 			1000 * 60 * 60,
 		);
+
+		return this.GetUpdateInfo();
 	}
 
 	// Private system related function

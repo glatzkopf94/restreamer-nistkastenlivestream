@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.3.0-dev12 – 2026-09-21
+
+- Produktkennung auf `NKL 1.2 Beta` angehoben.
+- Updatepruefung der Oberflaeche und des Core vollstaendig von
+  `service.datarhei.com` auf die Releases des eigenen GitHub-Repositorys
+  `glatzkopf94/restreamer-nistkastenlivestream` umgestellt. Dabei werden keine
+  Nutzungsmetriken, Zuschauerzahlen oder Installationskennungen uebertragen.
+- Unter den Systemeinstellungen eine manuelle NKL-Updatepruefung mit Anzeige
+  der verfuegbaren Version, Release-Link und bestaetigungspflichtiger
+  Installation ergaenzt.
+- Eng begrenzten Host-Update-Dienst ergaenzt. Er akzeptiert nur den festen
+  Updateauftrag fuer das neueste NKL-Release, prueft Release-ZIP und
+  SHA-256-Datei, sichert die Konfiguration, laedt das exakte GHCR-Tag und
+  ersetzt ausschliesslich den NKL-Container. Der Docker-Socket wird nicht in
+  den Restreamer-Container eingebunden.
+- Selbstupdates uebernehmen auch die Dateien des neuen Installationspakets;
+  Konfiguration, Kanaele, Overlays und DVR-Daten bleiben erhalten. Bei einem
+  Fehler nach der Image-Umschaltung wird die bisherige `.env` wiederhergestellt.
+- Standardnamen von Compose-Projekt und Container auf `restreamer-nkl` sowie
+  der Volumes auf `restreamer-nkl-config` und `restreamer-nkl-data` geaendert.
+  Der Installer migriert die bisherigen `restreamer-livechasing-*`-Volumes
+  automatisch und startet bei einem Migrationsfehler den alten Container neu.
+
 ## 0.3.0-dev11 – 2026-09-21
 
 - Repository und Container-Image auf den Projektnamen

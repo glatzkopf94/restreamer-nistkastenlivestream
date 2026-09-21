@@ -23,7 +23,7 @@ if [ -d "$stage_dir" ]; then
 else
     mkdir -p "$stage_dir"
 fi
-mkdir -p "$stage_dir/tests"
+mkdir -p "$stage_dir/tests" "$stage_dir/scripts" "$stage_dir/systemd"
 
 for file in \
     .env.example \
@@ -39,11 +39,15 @@ for file in \
     cp "$file" "$stage_dir/$file"
 done
 cp tests/smoke-test.sh "$stage_dir/tests/smoke-test.sh"
+cp scripts/nkl-update-agent.sh "$stage_dir/scripts/nkl-update-agent.sh"
+cp systemd/nkl-restreamer-update.service.in "$stage_dir/systemd/nkl-restreamer-update.service.in"
+cp systemd/nkl-restreamer-update.path.in "$stage_dir/systemd/nkl-restreamer-update.path.in"
 
 chmod 0755 \
     "$stage_dir/install.sh" \
     "$stage_dir/status.sh" \
     "$stage_dir/uninstall.sh" \
+	"$stage_dir/scripts/nkl-update-agent.sh" \
     "$stage_dir/tests/smoke-test.sh"
 
 rm -f "$archive" "$archive.sha256"

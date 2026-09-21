@@ -10,6 +10,7 @@ import (
 	gonet "net"
 	gohttp "net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"runtime/debug"
 	"sync"
@@ -735,10 +736,14 @@ func (a *api) start() error {
 	}
 
 	if cfg.CheckForUpdates {
+		releaseVersion := os.Getenv("NKL_RELEASE_VERSION")
+		if releaseVersion == "" {
+			releaseVersion = app.Version.String()
+		}
 		s, err := update.New(update.Config{
 			ID:      cfg.ID,
-			Name:    app.Name,
-			Version: app.Version.String(),
+			Name:    "NKL Restreamer",
+			Version: releaseVersion,
 			Arch:    app.Arch,
 			Monitor: a.metrics,
 			Logger:  a.log.logger.core.WithComponent("Update"),

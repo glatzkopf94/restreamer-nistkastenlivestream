@@ -1,9 +1,9 @@
-name: "${RESTREAMER_PROJECT_NAME:-restreamer-livechasing}"
+name: "${RESTREAMER_PROJECT_NAME:-restreamer-nkl}"
 
 services:
-  restreamer-livechasing:
-    image: "${RESTREAMER_IMAGE:-ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev11}"
-    container_name: "${RESTREAMER_CONTAINER_NAME:-restreamer-livechasing}"
+  restreamer-nkl:
+    image: "${RESTREAMER_IMAGE:-ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev12}"
+    container_name: "${RESTREAMER_CONTAINER_NAME:-restreamer-nkl}"
     restart: unless-stopped
     ports:
       - "${RESTREAMER_BIND_ADDRESS:-127.0.0.1}:${RESTREAMER_HTTP_PORT:-9080}:8080"
@@ -31,8 +31,8 @@ services:
 
 volumes:
   restreamer-config:
-    name: "${RESTREAMER_CONFIG_VOLUME:-restreamer-livechasing-config}"
+    name: "${RESTREAMER_CONFIG_VOLUME:-restreamer-nkl-config}"
     external: true
   restreamer-data:
-    name: "${RESTREAMER_DATA_VOLUME:-restreamer-livechasing-data}"
+    name: "${RESTREAMER_DATA_VOLUME:-restreamer-nkl-data}"
     external: true

@@ -1,0 +1,17 @@
+[Unit]
+Description=NKL Restreamer sicher aktualisieren
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/nkl-restreamer-update-agent "@PROJECT_DIR@" "@DATA_DIR@"
+TimeoutStartSec=20min
+User=root
+Group=root
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=read-only
+ProtectSystem=full
+ReadWritePaths=@PROJECT_DIR@ @DATA_DIR@ /usr/local/sbin
+

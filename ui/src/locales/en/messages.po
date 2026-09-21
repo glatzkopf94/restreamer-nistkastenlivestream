@@ -4086,3 +4086,83 @@ msgstr "Your stream needs to be encoded. Choose the desired encoder:"
 #: src/views/Edit/Sources/VirtualVideo.js:119
 msgid "YUV test pattern"
 msgstr "YUV test pattern"
+
+#: src/views/Settings.js
+msgid "Check for NKL updates"
+msgstr "Check for NKL updates"
+
+#: src/views/Settings.js
+msgid "The check reads only the latest release information from the NKL GitHub repository."
+msgstr "The check reads only the latest release information from the NKL GitHub repository."
+
+#: src/views/Settings.js
+msgid "Checking ..."
+msgstr "Checking ..."
+
+#: src/views/Settings.js
+msgid "Check now"
+msgstr "Check now"
+
+#: src/views/Settings.js
+msgid "NKL update available: {0}"
+msgstr "NKL update available: {0}"
+
+#: src/views/Settings.js
+msgid "Release details"
+msgstr "Release details"
+
+#: src/views/Settings.js
+msgid "Install update"
+msgstr "Install update"
+
+#: src/views/Settings.js
+msgid "Installed version {0} is up to date."
+msgstr "Installed version {0} is up to date."
+
+#: src/views/Settings.js
+msgid "The NKL release information could not be retrieved."
+msgstr "The NKL release information could not be retrieved."
+
+#: src/views/Settings.js
+msgid "Check for NKL updates on the server"
+msgstr "Check for NKL updates on the server"
+
+#: src/views/Settings.js
+msgid "No usage metrics or viewer data are sent during this check."
+msgstr "No usage metrics or viewer data are sent during this check."
+
+#: src/views/Settings.js
+msgid "The NKL update check failed."
+msgstr "The NKL update check failed."
+
+#: src/views/Settings.js
+msgid "NKL Restreamer is up to date."
+msgstr "NKL Restreamer is up to date."
+
+#: src/views/Settings.js
+msgid "The NKL update was installed. The interface is reloading."
+msgstr "The NKL update was installed. The interface is reloading."
+
+#: src/views/Settings.js
+msgid "The NKL update could not be installed: {0}"
+msgstr "The NKL update could not be installed: {0}"
+
+#: src/views/Settings.js
+msgid "Installing NKL update"
+msgstr "Installing NKL update"
+
+#: src/views/Settings.js
+msgid "The image and the verified installation package are being downloaded. Streams will be interrupted briefly while the container is replaced."
+msgstr "The image and the verified installation package are being downloaded. Streams will be interrupted briefly while the container is replaced."
+
+#: src/views/Settings.js
+msgid "Install NKL update?"
+msgstr "Install NKL update?"
+
+#: src/views/Settings.js
+msgid "Install {0}"
+msgstr "Install {0}"
+
+#: src/views/Settings.js
+msgid "The current configuration and DVR data are retained. A configuration backup is created before the NKL container is replaced. Active streams are interrupted briefly."
+msgstr "The current configuration and DVR data are retained. A configuration backup is created before the NKL container is replaced. Active streams are interrupted briefly."

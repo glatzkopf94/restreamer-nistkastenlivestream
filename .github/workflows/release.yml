@@ -50,7 +50,7 @@ jobs:
           python3 tests/test-livechasing-manager.py
           python3 tests/test-player-ui.py
           ./scripts/check-release.sh
-          sh -n install.sh build-local.sh status.sh uninstall.sh tests/smoke-test.sh scripts/package-release.sh scripts/check-release.sh
+          sh -n install.sh build-local.sh status.sh uninstall.sh tests/smoke-test.sh scripts/package-release.sh scripts/check-release.sh scripts/nkl-update-agent.sh
 
       - name: Bei GitHub Container Registry anmelden
         shell: bash

@@ -1,7 +1,7 @@
 # NKL Restreamer installieren
 
 Dieses Installationspaket laedt das fertig gebaute AMD64-Docker-Image
-`ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev11`.
+`ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev12`.
 FFmpeg, Core und UI werden auf dem Zielserver nicht mehr kompiliert.
 
 ## Installation oder Update
@@ -9,16 +9,22 @@ FFmpeg, Core und UI werden auf dem Zielserver nicht mehr kompiliert.
 Als `root` ausfuehren:
 
 ```bash
-unzip -o restreamer-nistkastenlivestream-0.3.0-dev11.zip
-cd restreamer-nistkastenlivestream-0.3.0-dev11
+unzip -o restreamer-nistkastenlivestream-0.3.0-dev12.zip
+cd restreamer-nistkastenlivestream-0.3.0-dev12
 chmod 0755 install.sh status.sh uninstall.sh tests/smoke-test.sh
 ./install.sh
 ```
 
 Der Installer uebernimmt eine vorhandene `.env`. Liegt im Nachbarverzeichnis
-noch dev10 oder dev9, wird dessen `.env` automatisch gefunden. Bekannte lokale
+noch dev11, dev10 oder dev9, wird dessen `.env` automatisch gefunden. Bekannte lokale
 dev-Images werden auf das GHCR-Release aktualisiert. Konfiguration und
 Docker-Volumes mit Einstellungen und DVR-Daten bleiben erhalten.
+
+Die bisherigen Standardnamen `restreamer-livechasing` werden automatisch auf
+`restreamer-nkl` umgestellt. Dabei werden die alten Konfigurations- und
+Datenvolumes einmalig in `restreamer-nkl-config` und `restreamer-nkl-data`
+uebernommen. Nach der Installation kann ein neues Release direkt unter
+`System -> Allgemein` geprueft und installiert werden.
 
 Der erste Download dauert abhaengig von der Verbindung etwas laenger. Bei
 spaeteren Updates laedt Docker nur neue oder geaenderte Layer.

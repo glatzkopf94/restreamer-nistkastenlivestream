@@ -52,9 +52,9 @@ case "$release_image" in
 esac
 
 config_volume="$(sed -n 's/^RESTREAMER_CONFIG_VOLUME=//p' .env | tail -n 1)"
-config_volume="${config_volume:-restreamer-livechasing-config}"
+config_volume="${config_volume:-restreamer-nkl-config}"
 data_volume="$(sed -n 's/^RESTREAMER_DATA_VOLUME=//p' .env | tail -n 1)"
-data_volume="${data_volume:-restreamer-livechasing-data}"
+data_volume="${data_volume:-restreamer-nkl-data}"
 
 docker volume inspect "$config_volume" >/dev/null 2>&1 || \
     docker volume create --name "$config_volume" >/dev/null
@@ -63,7 +63,7 @@ docker volume inspect "$data_volume" >/dev/null 2>&1 || \
 
 mkdir -p backups
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
-existing_container="$(docker compose -f compose.yaml ps --all -q restreamer-livechasing 2>/dev/null || true)"
+existing_container="$(docker compose -f compose.yaml ps --all -q restreamer-nkl 2>/dev/null || true)"
 
 if [ -n "$existing_container" ]; then
     config_source="$(docker inspect "$existing_container" --format '{{range .Mounts}}{{if eq .Destination "/core/config"}}{{.Source}}{{end}}{{end}}')"
@@ -76,20 +76,20 @@ if [ -n "$existing_container" ]; then
 fi
 
 echo "[1/5] FFmpeg 9.0.1 mit Restreamer-Patches bauen"
-docker build --pull --tag livechasing/ffmpeg:9.0.1 ffmpeg
+docker build --pull --tag nkl/ffmpeg:9.0.1 ffmpeg
 
 echo "[2/5] Restreamer Core bauen"
-docker build --pull --tag livechasing/restreamer-core:0.3.0-dev11 core
+docker build --pull --tag nkl/restreamer-core:0.3.0-dev12 core
 
 echo "[3/5] Restreamer UI bauen"
-docker build --pull --tag livechasing/restreamer-ui:0.3.0-dev11 ui
+docker build --pull --tag nkl/restreamer-ui:0.3.0-dev12 ui
 
 echo "[4/5] Release-Image zusammensetzen"
 docker build \
     --file bundle/Dockerfile \
-    --build-arg FFMPEG_IMAGE=livechasing/ffmpeg:9.0.1 \
-    --build-arg CORE_IMAGE=livechasing/restreamer-core:0.3.0-dev11 \
-    --build-arg RESTREAMER_UI_IMAGE=livechasing/restreamer-ui:0.3.0-dev11 \
+    --build-arg FFMPEG_IMAGE=nkl/ffmpeg:9.0.1 \
+    --build-arg CORE_IMAGE=nkl/restreamer-core:0.3.0-dev12 \
+    --build-arg RESTREAMER_UI_IMAGE=nkl/restreamer-ui:0.3.0-dev12 \
     --tag "$release_image" \
     .
 
@@ -111,7 +111,7 @@ until curl --fail --silent "http://127.0.0.1:${http_port}/" >/dev/null 2>&1; do
     if [ "$attempt" -ge 40 ]; then
         echo "Die Instanz antwortet nicht. Diagnose:" >&2
         docker compose -f compose.yaml ps >&2
-        container_id="$(docker compose -f compose.yaml ps -q restreamer-livechasing 2>/dev/null || true)"
+        container_id="$(docker compose -f compose.yaml ps -q restreamer-nkl 2>/dev/null || true)"
         if [ -n "$container_id" ]; then
             docker logs --tail 120 "$container_id" >&2
         fi
@@ -123,5 +123,5 @@ done
 ./tests/smoke-test.sh
 
 echo
-echo "Restreamer Nistkasten Livestream 0.3.0-dev11 wurde lokal gebaut und laeuft auf http://127.0.0.1:${http_port}"
+echo "Restreamer Nistkasten Livestream 0.3.0-dev12 wurde lokal gebaut und laeuft auf http://127.0.0.1:${http_port}"
 echo "Ein vorhandener offizieller Container namens 'restreamer' wurde nicht veraendert."

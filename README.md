@@ -1,4 +1,4 @@
-# Restreamer Nistkasten Livestream 0.3.0-dev11
+# Restreamer Nistkasten Livestream 0.3.0-dev12
 
 Inoffizieller Fork des datarhei Restreamers fuer Nistkasten-Livestreams,
 hochaufgeloeste HEVC-/H.265-Kameras, aktuelle FFmpeg-Komponenten, frei
@@ -26,10 +26,13 @@ Quellrepository und Container-Image:
 - automatische 16:9-/4:3-Player-Geometrie ohne Formatwechsel beim Start
 - optional nur ein aktiver Player pro Browser sowie erneute Play-Bestaetigung
   nach 15 Minuten zur Begrenzung ausgehender HLS-Bandbreite
-- eigene NKL-Oberflaeche mit Weltraumhintergrund und Kennung `NKL 1.1 Beta`
+- eigene NKL-Oberflaeche mit Weltraumhintergrund und Kennung `NKL 1.2 Beta`
 - alle zwei Sekunden aktualisierte, kanalübergreifend deduplizierte
   Zuschauerzahl direkt neben CPU- und RAM-Auslastung
 - vorgebautes AMD64-Image mit schneller Pull-Installation ueber GHCR
+- Updatepruefung ausschliesslich ueber das eigene NKL-GitHub-Repository
+- bestaetigungspflichtige, SHA-256-gepruefte Updates direkt aus den
+  Systemeinstellungen, ohne Docker-Socket im Restreamer-Container
 - isolierte Docker-Compose-Installation neben einem offiziellen Restreamer
 
 ## Voraussetzungen
@@ -47,8 +50,8 @@ lokaler Build bleibt mit `./build-local.sh` moeglich.
 ## Installation
 
 ```bash
-unzip -o restreamer-nistkastenlivestream-0.3.0-dev11.zip
-cd restreamer-nistkastenlivestream-0.3.0-dev11
+unzip -o restreamer-nistkastenlivestream-0.3.0-dev12.zip
+cd restreamer-nistkastenlivestream-0.3.0-dev12
 chmod 0755 install.sh status.sh uninstall.sh tests/smoke-test.sh
 ./install.sh
 ```
@@ -56,12 +59,27 @@ chmod 0755 install.sh status.sh uninstall.sh tests/smoke-test.sh
 Bei der ersten Installation wird `.env.example` automatisch als `.env`
 uebernommen. Bei einem Update bleibt eine vorhandene `.env` erhalten; bekannte
 lokale dev-Images werden automatisch auf das aktuelle GHCR-Image umgestellt.
-Eine `.env` aus einem direkt benachbarten dev10- oder dev9-Verzeichnis wird
+Eine `.env` aus einem direkt benachbarten dev11-, dev10- oder dev9-Verzeichnis wird
 automatisch uebernommen.
 
-Standardmaessig entsteht der Container `restreamer-livechasing` mit eigenen
-Volumes. Die Weboberflaeche bindet nur lokal an `http://127.0.0.1:9080`.
+Standardmaessig entstehen das Compose-Projekt und der Container
+`restreamer-nkl` mit den Volumes `restreamer-nkl-config` und
+`restreamer-nkl-data`. Die Weboberflaeche bindet nur lokal an
+`http://127.0.0.1:9080`.
 Ein HTTPS-Reverse-Proxy kann unveraendert auf diesen Port zeigen.
+
+Beim Wechsel von dev11 werden die bisherigen Standard-Volumes
+`restreamer-livechasing-config` und `restreamer-livechasing-data` automatisch
+gesichert und in die neuen NKL-Volumes kopiert. Erst nach erfolgreichem
+Smoke-Test wird der alte Container entfernt. Bei einem Fehler startet der
+Installer den bisherigen Container wieder.
+
+Unter `System -> Allgemein` kann Restreamer manuell nach neuen Releases im
+Repository `glatzkopf94/restreamer-nistkastenlivestream` suchen. Die optionale
+serverseitige Pruefung verwendet dasselbe Repository und sendet keine
+Nutzungsmetriken oder Zuschauerdaten. Ein Update aus der Oberflaeche laedt das
+Release-ZIP samt SHA-256-Pruefsumme und das dazugehoerige GHCR-Image, erstellt
+eine Konfigurationssicherung und ersetzt nur den Container `restreamer-nkl`.
 
 Die Zuschaueranzeige unten rechts zaehlt aktive HLS-Zuschauer aller Kanaele.
 Mehrere Streams desselben Browsers werden ueber eine lokale, zufaellige
@@ -309,7 +327,7 @@ Aktualisierung auf demselben Port muss Nginx nicht geaendert werden.
 ./status.sh
 ./tests/smoke-test.sh
 docker compose -f compose.yaml ps
-docker logs --since 10m restreamer-livechasing
+docker logs --since 10m restreamer-nkl
 ```
 
 Der Smoke-Test prueft RTSP, die datarhei-JSON-Ausgabe von FFmpeg, SetPTS,
@@ -334,11 +352,11 @@ mit der technischen Version startet Build, Tests, GHCR-Push und die Erstellung
 des kleinen Installations-ZIPs:
 
 ```bash
-git tag v0.3.0-dev11
-git push origin v0.3.0-dev11
+git tag v0.3.0-dev12
+git push origin v0.3.0-dev12
 ```
 
-Das Image erhaelt die Tags `0.3.0-dev11` und `1.1-beta`. Nach dem ersten Lauf
+Das Image erhaelt die Tags `0.3.0-dev12` und `1.2-beta`. Nach dem ersten Lauf
 muss das Paket auf GitHub unter `Packages -> Package settings -> Change
 visibility` einmalig auf `Public` gestellt werden, damit der Installer ohne
 GitHub-Anmeldung darauf zugreifen kann.
@@ -388,7 +406,7 @@ Details zu Fremdkomponenten und Lizenzen stehen in
 
 ## Status
 
-Version 0.3.0-dev11 / NKL 1.1 Beta ist eine Entwicklungsvorschau. Der
+Version 0.3.0-dev12 / NKL 1.2 Beta ist eine Entwicklungsvorschau. Der
 offizielle Produktivcontainer bleibt unberuehrt. Vor einem breiten
 Produktiveinsatz werden ein mehrtaegiger Dauertest, Browserpruefungen und ein
 Wiederherstellungstest der Konfigurationssicherung empfohlen.

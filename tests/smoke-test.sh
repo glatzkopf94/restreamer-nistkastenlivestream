@@ -6,7 +6,7 @@ project_dir="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 cd "$project_dir"
 . ./release.env
 
-container="$(docker compose -f compose.yaml ps -q restreamer-livechasing)"
+container="$(docker compose -f compose.yaml ps -q restreamer-nkl)"
 if [ -z "$container" ]; then
     echo "Smoke-Test: Container laeuft nicht." >&2
     exit 1
@@ -40,6 +40,8 @@ docker exec "$container" sh -c 'grep -Fq "vjs-live-no-dvr" /core/ui/_player/vide
 docker exec "$container" sh -c 'grep -Fq -- "--lc-player-ratio" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c 'grep -Fq "Automatically detect 16:9 or 4:3" /core/ui/static/js/main.*.js'
 docker exec "$container" sh -c 'grep -Fq "Delete all DVR content" /core/ui/static/js/main.*.js'
+docker exec "$container" sh -c 'grep -Fq "install-latest-nkl-release" /core/ui/static/js/main.*.js'
+docker exec "$container" sh -c 'test "$NKL_RELEASE_VERSION" = "'"$RELEASE_VERSION"'"'
 docker exec "$container" sh -c "grep -Fq '$PRODUCT_LABEL' /core/ui/static/js/main.*.js"
 docker exec "$container" sh -c 'grep -Fq "livechasing-viewer-id-v1" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c 'ls /core/ui/static/media/background-restreamer.*.png >/dev/null'

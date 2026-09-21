@@ -140,11 +140,37 @@ class PlayerUITest(unittest.TestCase):
         global_theme = (ROOT / "ui/src/theme/global.js").read_text(encoding="utf-8")
         background = ROOT / "ui/src/assets/images/background-restreamer.png"
 
-        self.assertIn('"nklVersion": "1.1 Beta"', package)
+        self.assertIn('"nklVersion": "1.2 Beta"', package)
         self.assertIn("`NKL ${pkg.nklVersion || Version}`", version)
         self.assertIn("background-restreamer.png", global_theme)
         self.assertTrue(background.is_file())
         self.assertGreater(background.stat().st_size, 100000)
+
+    def test_nkl_update_flow_uses_only_the_fork_repository(self):
+        version = (ROOT / "ui/src/version.js").read_text(encoding="utf-8")
+        restreamer = (ROOT / "ui/src/utils/restreamer.js").read_text(encoding="utf-8")
+        settings = (ROOT / "ui/src/views/Settings.js").read_text(encoding="utf-8")
+        core_update = (ROOT / "core/update/update.go").read_text(encoding="utf-8")
+        installer = (ROOT / "install.sh").read_text(encoding="utf-8")
+        agent = (ROOT / "scripts/nkl-update-agent.sh").read_text(encoding="utf-8")
+
+        repository = "glatzkopf94/restreamer-nistkastenlivestream"
+        self.assertIn(repository, version)
+        self.assertIn("InstallLatestUpdate", restreamer)
+        self.assertIn("install-latest-nkl-release", restreamer)
+        self.assertIn("Install update", settings)
+        self.assertIn(repository, core_update)
+        self.assertNotIn("service.datarhei.com/api/v1/app_version", core_update)
+        self.assertIn("install_update_agent", installer)
+        self.assertIn("foreign-image-blocked", agent)
+        self.assertIn("sha256sum --check", agent)
+
+        compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+        env_example = (ROOT / ".env.example").read_text(encoding="utf-8")
+        self.assertIn("restreamer-nkl:", compose)
+        self.assertIn("RESTREAMER_CONTAINER_NAME=restreamer-nkl", env_example)
+        self.assertIn("RESTREAMER_CONFIG_VOLUME=restreamer-nkl-config", env_example)
+        self.assertIn("RESTREAMER_DATA_VOLUME=restreamer-nkl-data", env_example)
 
 
 if __name__ == "__main__":

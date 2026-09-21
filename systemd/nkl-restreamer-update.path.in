@@ -1,0 +1,9 @@
+[Unit]
+Description=NKL Restreamer Update-Auftraege beobachten
+
+[Path]
+PathExistsGlob=@DATA_DIR@/nkl-update/requests/*.json
+Unit=nkl-restreamer-update.service
+
+[Install]
+WantedBy=multi-user.target

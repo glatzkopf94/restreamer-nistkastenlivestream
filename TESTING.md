@@ -1,4 +1,4 @@
-# Teststatus 0.3.0-dev11
+# Teststatus 0.3.0-dev12
 
 ## Erfolgreich ausgefuehrt
 
@@ -20,7 +20,13 @@
   nur die HLS-Dateien des angeforderten Kanals entfernt werden
 - Shell-Syntaxpruefung fuer Installer, Status, Deinstallation, Startskripte
   und Container-Smoke-Test sowie Paketierung des Schnellinstallers
-- elf statische Player-Pruefungen: kein zusaetzliches DVR-Panel, nativer
+- Der GitHub-Releasebuild fuehrt sechs deterministische UI-Suites seriell und
+  mit einem festen 15-Minuten-Limit aus. Die grosse uebernommene
+  `views/Edit/Sources/Network.test.js`-Suite bleibt unter CRA/Jest im
+  Docker-Runner nach den uebrigen Suites offen und ist deshalb nicht Teil des
+  blockierenden Image-Buildschritts; der neue Netzwerk-Eingabetest und die
+  statischen RTSP-/Player-Pruefungen bleiben aktiv.
+- zwoelf statische Player-Pruefungen: kein zusaetzliches DVR-Panel, nativer
   Live-Schalter kompakt hervorgehoben, sichere Player-Overlay-Elemente,
   Cache-Bypass, fuenfsekündige Textpruefung, gemeinsamer Assistent und
   DVR-Sicherheitsrand sowie abschaltbare Seitenverhaeltnis-, Ein-Player- und
@@ -28,7 +34,8 @@
   Nicht-DVR-Livehinweis, die robuste HLS-Reaktivierung ohne Doppel-Load, die
   responsive Overlay-Skalierung und das Entfernen des alten Logo-Reiters.
   Hinzu kommen die sichere Zuschauer-ID-Weitergabe sowie die neue
-  NKL-Kennung und Hintergrundgrafik
+  NKL-Kennung, Hintergrundgrafik, ausschliesslich eigenes Release-Repository,
+  gesicherter UI-Updateauftrag und die neuen `restreamer-nkl`-Standardnamen
   geprueft
 
 Die GitHub-Aktion baut und testet das fertige Image vor der Veroeffentlichung.

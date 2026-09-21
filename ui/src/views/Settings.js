@@ -709,6 +709,8 @@ export default function Settings({ restreamer = null }) {
 		has: restreamer.HasUpdates(),
 		want: restreamer.CheckForUpdates(),
 	});
+	const [$updateInfo, setUpdateInfo] = React.useState(restreamer.GetUpdateInfo());
+	const [$updateAction, setUpdateAction] = React.useState({ checking: false, installing: false });
 	const [$tab, setTab] = React.useState(_tab ? _tab : 'general');
 	const [$tabs, setTabs] = React.useState({
 		general: { errors: false, messages: [] }, // messages is an array of objects: {configvalue: '', error: ''}
@@ -728,6 +730,7 @@ export default function Settings({ restreamer = null }) {
 		restart: false,
 		saved: false,
 		purgeDVR: false,
+		update: false,
 	});
 	const [$saving, setSaving] = React.useState(false);
 	const [$metadata, setMetadata] = React.useState(null);
@@ -753,10 +756,8 @@ export default function Settings({ restreamer = null }) {
 	}, []);
 
 	useInterval(() => {
-		setUpdates({
-			...$updates,
-			has: restreamer.HasUpdates(),
-		});
+		setUpdates((updates) => ({ ...updates, has: restreamer.HasUpdates() }));
+		setUpdateInfo(restreamer.GetUpdateInfo());
 	}, 1000 * 2);
 
 	const load = async () => {
@@ -835,6 +836,45 @@ export default function Settings({ restreamer = null }) {
 			...$updates,
 			want: !$updates.want,
 		});
+	};
+
+	const handleCheckUpdatesNow = async () => {
+		setUpdateAction({ ...$updateAction, checking: true });
+		const info = await restreamer.CheckUpdatesNow();
+		setUpdateAction({ ...$updateAction, checking: false });
+		if (info) setUpdateInfo(info);
+		setUpdates((updates) => ({ ...updates, has: restreamer.HasUpdates() }));
+
+		if (!info || info.error) {
+			notify.Dispatch('error', 'nkl:update-check', i18n._(t`The NKL update check failed.`));
+		} else if (!restreamer.HasUpdates()) {
+			notify.Dispatch('info', 'nkl:update-current', i18n._(t`NKL Restreamer is up to date.`));
+		}
+	};
+
+	const handleUpdateDialog = () => {
+		setDialogs({ ...$dialogs, update: !$dialogs.update });
+	};
+
+	const handleInstallUpdate = async () => {
+		setDialogs({ ...$dialogs, update: false });
+		setUpdateAction({ checking: false, installing: true });
+
+		let result = { ok: false, error: 'unknown' };
+		try {
+			result = await restreamer.InstallLatestUpdate($updateInfo.latestVersion);
+		} catch (error) {
+			result = { ok: false, error: error.message || 'unknown' };
+		}
+
+		if (result.ok === true) {
+			notify.Dispatch('success', 'nkl:update-installed', i18n._(t`The NKL update was installed. The interface is reloading.`));
+			window.setTimeout(() => window.location.reload(), 1500);
+			return;
+		}
+
+		setUpdateAction({ checking: false, installing: false });
+		notify.Dispatch('error', 'nkl:update-install', i18n._(t`The NKL update could not be installed: ${result.error}`));
 	};
 
 	const handleChange = (what) => (event) => {
@@ -1330,31 +1370,56 @@ export default function Settings({ restreamer = null }) {
 									</Grid>
 								)}
 								<Grid item xs={12}>
-									<Checkbox label={<Trans>Check for updates</Trans>} checked={$updates.want} onChange={handleCheckForUpdates} />
+									<Checkbox label={<Trans>Check for NKL updates</Trans>} checked={$updates.want} onChange={handleCheckForUpdates} />
+									<Typography variant="caption" display="block" sx={{ mb: '0.8em' }}>
+										<Trans>The check reads only the latest release information from the NKL GitHub repository.</Trans>
+									</Typography>
+									<Button
+										variant="outlined"
+										color="primary"
+										disabled={!$updates.want || $updateAction.checking || $updateAction.installing}
+										onClick={handleCheckUpdatesNow}
+									>
+										{$updateAction.checking ? <Trans>Checking ...</Trans> : <Trans>Check now</Trans>}
+									</Button>
 									{$updates.has === true && (
-										<BoxText color="success">
+										<BoxText color="success" style={{ marginTop: '1em' }}>
 											<Typography variant="inherit" color="inherit" width="100%">
-												<Link
-													color="inherit"
-													style={{ textDecoration: 'underline', cursor: 'pointer' }}
-													onClick={handleHelp('update-link')}
-													target="_blank"
-												>
-													<Trans>There are updates available. Here you get more information.</Trans>
+												<Trans>NKL update available: {$updateInfo.latestVersion}</Trans>{' '}
+												<Link color="inherit" href={$updateInfo.releaseURL} target="_blank" rel="noreferrer">
+													<Trans>Release details</Trans>
 												</Link>
+											</Typography>
+											<Button variant="outlined" color="inherit" disabled={$updateAction.installing} onClick={handleUpdateDialog}>
+												<Trans>Install update</Trans>
+											</Button>
+										</BoxText>
+									)}
+									{$updates.want && !$updates.has && $updateInfo.checkedAt && !$updateInfo.error && (
+										<Typography variant="caption" display="block" sx={{ mt: '0.8em' }}>
+											<Trans>Installed version {$updateInfo.currentVersion} is up to date.</Trans>
+										</Typography>
+									)}
+									{$updates.want && $updateInfo.error && (
+										<BoxText color="danger" style={{ marginTop: '1em' }}>
+											<Typography variant="inherit" color="inherit">
+												<Trans>The NKL release information could not be retrieved.</Trans>
 											</Typography>
 										</BoxText>
 									)}
 								</Grid>
 								<Grid item xs={12}>
 									<Checkbox
-										label={<Trans>Send anonymous metrics (helps us for future development)</Trans>}
+										label={<Trans>Check for NKL updates on the server</Trans>}
 										checked={config.update_check}
 										disabled={env('update_check')}
 										onChange={handleChange('update_check')}
 									/>
 									{env('update_check') && <Env />}
 									<ErrorBox configvalue="update_check" messages={$tabs.general.messages} />
+									<Typography variant="caption" display="block">
+										<Trans>No usage metrics or viewer data are sent during this check.</Trans>
+									</Typography>
 								</Grid>
 								<Grid item xs={12}>
 									<Checkbox label={<Trans>Expert mode</Trans>} checked={$expert} onChange={handleExpertMode} />
@@ -2350,6 +2415,19 @@ export default function Settings({ restreamer = null }) {
 			<Backdrop open={$saving}>
 				<CircularProgress color="inherit" />
 			</Backdrop>
+			<Backdrop open={$updateAction.installing}>
+				<Paper xs={8} sm={6} md={5}>
+					<PaperHeader title={<Trans>Installing NKL update</Trans>} />
+					<PaperContent>
+						<Typography variant="body1">
+							<Trans>
+								The image and the verified installation package are being downloaded. Streams will be interrupted briefly while the container is replaced.
+							</Trans>
+						</Typography>
+						<LinearProgress sx={{ mt: '1em' }} />
+					</PaperContent>
+				</Paper>
+			</Backdrop>
 			<Backdrop open={$restart.restarting}>
 				<Paper xs={4} sm={4} md={4}>
 					<PaperHeader title={<Trans>Restarting</Trans>} />
@@ -2390,6 +2468,27 @@ export default function Settings({ restreamer = null }) {
 					/>
 				</Paper>
 			</Backdrop>
+			<Dialog
+				open={$dialogs.update}
+				title={<Trans>Install NKL update?</Trans>}
+				onClose={handleUpdateDialog}
+				buttonsLeft={
+					<Button variant="outlined" color="default" onClick={handleUpdateDialog}>
+						<Trans>Abort</Trans>
+					</Button>
+				}
+				buttonsRight={
+					<Button variant="outlined" color="secondary" onClick={handleInstallUpdate}>
+						<Trans>Install {$updateInfo.latestVersion}</Trans>
+					</Button>
+				}
+			>
+				<Typography variant="body1">
+					<Trans>
+						The current configuration and DVR data are retained. A configuration backup is created before the NKL container is replaced. Active streams are interrupted briefly.
+					</Trans>
+				</Typography>
+			</Dialog>
 			<Dialog
 				open={$dialogs.purgeDVR}
 				title={<Trans>Delete all DVR content?</Trans>}

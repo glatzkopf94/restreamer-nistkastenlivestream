@@ -102,8 +102,8 @@ const topics = {
 		de: 'https://docs.datarhei.com/restreamer/v/de/wissensdatenbank/user-guides/restreamer-einstellungen/allgemeine-systemeinstellungen',
 	},
 	'settings-update-link': {
-		en: 'https://docs.datarhei.com/restreamer/installing/update',
-		de: 'https://docs.datarhei.com/restreamer/v/de/installation/aktualisieren',
+		en: 'https://github.com/glatzkopf94/restreamer-nistkastenlivestream/releases',
+		de: 'https://github.com/glatzkopf94/restreamer-nistkastenlivestream/releases',
 	},
 	'settings-service': {
 		en: 'https://docs.datarhei.com/restreamer/knowledge-base/manual/system-settings/service',

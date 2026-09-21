@@ -118,7 +118,7 @@ func (d *Config) init() {
 	d.vars.Register(value.NewString(&d.ID, uuid.New().String()), "id", "CORE_ID", nil, "ID for this instance", true, false)
 	d.vars.Register(value.NewString(&d.Name, haikunator.New().Haikunate()), "name", "CORE_NAME", nil, "A human readable name for this instance", false, false)
 	d.vars.Register(value.NewAddress(&d.Address, ":8080"), "address", "CORE_ADDRESS", nil, "HTTP listening address", false, false)
-	d.vars.Register(value.NewBool(&d.CheckForUpdates, true), "update_check", "CORE_UPDATE_CHECK", nil, "Check for updates and send anonymized data", false, false)
+	d.vars.Register(value.NewBool(&d.CheckForUpdates, true), "update_check", "CORE_UPDATE_CHECK", nil, "Check the NKL GitHub repository for updates without sending usage metrics", false, false)
 
 	// Log
 	d.vars.Register(value.NewString(&d.Log.Level, "info"), "log.level", "CORE_LOG_LEVEL", nil, "Loglevel: silent, error, warn, info, debug", false, false)

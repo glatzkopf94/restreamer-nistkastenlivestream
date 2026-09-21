@@ -165,14 +165,14 @@ function AboutModal({ open = false, onClose = () => {} }) {
 
 	return (
 		<Modal open={open} onClose={onClose} className="modal">
-			<ModalContent title="About datarhei Restreamer" onClose={onClose} className={classes.modalPaper}>
+			<ModalContent title="About NKL Restreamer" onClose={onClose} className={classes.modalPaper}>
 				<Grid container spacing={1}>
 					<Grid item xs={12} className={classes.aboutImage}>
 						<PaperThumb image={welcomeImage} title="Welcome to Restreamer v2" height="200px" />
 					</Grid>
 					<Grid item xs={12}>
 						<Typography variant="body1">
-							This is the frontend and a part of a free open source livestreaming solution for video data. The second part is the{' '}
+							NKL Restreamer is an unofficial fork for Nistkasten Livestream based on the open source datarhei Restreamer and{' '}
 							<Link color="secondary" href="https://github.com/datarhei/core" target="_blank">
 								datarhei Core
 							</Link>{' '}
@@ -186,13 +186,13 @@ function AboutModal({ open = false, onClose = () => {} }) {
 						</Typography>
 						<Typography>
 							<strong>Repo</strong>:{' '}
-							<Link color="secondary" target="_blank" href="https://github.com/datarhei/restreamer">
-								github.com/datarhei/restreamer
+							<Link color="secondary" target="_blank" href={Version.Repository}>
+								github.com/glatzkopf94/restreamer-nistkastenlivestream
 							</Link>
 						</Typography>
 						<Typography>
 							<strong>Licence</strong>:{' '}
-							<Link color="secondary" target="_blank" href="https://github.com/datarhei/restreamer/blob/master/LICENSE">
+							<Link color="secondary" target="_blank" href={`${Version.Repository}/blob/main/LICENSE`}>
 								Apache License 2.0
 							</Link>
 						</Typography>
@@ -287,13 +287,13 @@ function HeaderMenu({
 						</ListItemIcon>
 						<Trans>About</Trans>
 					</MenuItem>
-					<MenuItem component="a" href="https://docs.datarhei.com/restreamer" target="blank">
+						<MenuItem component="a" href={Version.Repository} target="blank">
 						<ListItemIcon>
 							<HelpOutlineIcon fontSize="small" />
 						</ListItemIcon>
 						<Trans>Docs</Trans>
 					</MenuItem>
-					<MenuItem component="a" href="https://github.com/datarhei/restreamer/issues" target="blank">
+						<MenuItem component="a" href={`${Version.Repository}/issues`} target="blank">
 						<ListItemIcon>
 							<BugReportIcon fontSize="small" />
 						</ListItemIcon>
@@ -328,13 +328,13 @@ function HeaderMenu({
 						</ListItemIcon>
 						<Trans>About</Trans>
 					</MenuItem>
-					<MenuItem component="a" href="https://docs.datarhei.com/restreamer" target="blank">
+					<MenuItem component="a" href={Version.Repository} target="blank">
 						<ListItemIcon>
 							<HelpOutlineIcon fontSize="small" />
 						</ListItemIcon>
 						<Trans>Docs</Trans>
 					</MenuItem>
-					<MenuItem component="a" href="https://github.com/datarhei/restreamer/issues" target="blank">
+					<MenuItem component="a" href={`${Version.Repository}/issues`} target="blank">
 						<ListItemIcon>
 							<BugReportIcon fontSize="small" />
 						</ListItemIcon>
