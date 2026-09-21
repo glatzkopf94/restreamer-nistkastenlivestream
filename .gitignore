@@ -1,6 +1,6 @@
 .env
 backups/
-dist/
+/dist/
 ui/build/
 ui/node_modules/
 *.log
