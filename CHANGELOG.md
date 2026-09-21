@@ -1,0 +1,276 @@
+# Changelog
+
+## 0.3.0-dev11 – 2026-09-21
+
+- Repository und Container-Image auf den Projektnamen
+  `restreamer-nistkastenlivestream` umgestellt.
+- GitHub-Actions-Workflow ergaenzt, der FFmpeg, Core und UI zentral baut,
+  testet und das fertige AMD64-Image in der GitHub Container Registry
+  veroeffentlicht.
+- Normalen Installer auf eine schnelle Pull-Installation umgestellt. Auf dem
+  Zielserver wird nichts mehr kompiliert; Konfigurationssicherung, bestehende
+  Volumes, Smoke-Test und Schutz der offiziellen Restreamer-Instanz bleiben
+  erhalten.
+- Automatische GitHub-Releases mit kleinem Installations-ZIP und
+  SHA-256-Pruefsumme fuer Tags nach dem Schema `v0.3.0-dev11` ergaenzt.
+- Bisherigen lokalen Komplettbuild als `build-local.sh` fuer Entwicklung und
+  Notfaelle beibehalten.
+- Produktkennung auf `NKL 1.1 Beta` angehoben und Herkunfts-/Lizenzhinweise
+  fuer den inoffiziellen datarhei-Fork erweitert.
+
+## 0.3.0-dev10 – 2026-09-20
+
+- Interne Oberflaechenkennung `NKL 1.0 Beta` eingefuehrt. Sie ersetzt in der
+  Fusszeile den zufaellig erzeugten Core-Namen; folgende NKL-Ausgaben koennen
+  zentral auf `1.1`, `1.2` und weitere Versionen angehoben werden.
+- Den bisherigen Standardhintergrund der Verwaltungsoberflaeche durch die
+  neue Weltraumgrafik ersetzt und bildschirmfuellend, mittig sowie responsiv
+  eingebunden.
+- Kanalübergreifende Live-Anzeige eindeutiger HLS-Zuschauer neben CPU und RAM
+  ergaenzt. Die Zahl wird alle zwei Sekunden aktualisiert.
+- Derselbe Browser erhaelt eine lokale, zufaellige Zuschauer-ID. Mehrere
+  gleichzeitig geladene Kanaele werden dadurch nur einmal gezaehlt. Fuer
+  bestehende und fremde Player greift eine Rueckfallerkennung aus
+  anonymisierter IP und Browserkennung.
+- Die deutsche UI-Bezeichnung `Zuschauende` wurde durch `Zuschauer` ersetzt.
+- Regressionstests fuer kanalübergreifende Deduplizierung und sichere
+  Weitergabe der Zuschauer-ID durch umgeschriebene HLS-Playlists ergaenzt.
+
+## 0.3.0-dev9 – 2026-09-18
+
+- Automatische Erkennung von 16:9- und 4:3-Videostreams ergaenzt. Player,
+  Poster, oEmbed-Daten und responsiver Iframe-Code erhalten das erkannte
+  Format bereits vor dem ersten Play-Klick; Browser-Metadaten dienen als
+  Rueckfallpruefung.
+- Optionales Ein-Player-Limit je Browser: Beim Aktivieren eines anderen
+  Players desselben Restreamer-Hosts wird die vorherige HLS-Quelle vollstaendig
+  entladen und kann nur bewusst wieder aktiviert werden.
+- Optionales 15-Minuten-Limit fuer aktive Wiedergabe. Nach Ablauf wird die
+  HLS-Quelle entladen und erst nach einem erneuten Play-Klick neu verbunden;
+  manuelle Pausen werden nicht mitgezaehlt.
+- Alle drei neuen Funktionen sind je Stream unter den Player-
+  Wiedergabeeinstellungen abschaltbar und fuer bestehende sowie neue Kanaele
+  standardmaessig aktiviert.
+- Die Reaktivierung eines durch die Ein-Player-Sperre pausierten HLS-Players
+  startet die Quelle nur noch einmal. Ein zusaetzlicher Startschutz und eine
+  zeitgesteuerte Rueckkehr zur Play-Schaltflaeche verhindern haengende Player
+  bei Netzwerk- oder Browserfehlern.
+- Player-Overlay-Text, Abstaende, Hintergrund und Logos skalieren jetzt mit
+  der tatsaechlichen Playergroesse. Logos behalten dabei ihr natuerliches
+  Seitenverhaeltnis und werden auch in kleinen Einbettungen begrenzt.
+- Bei Streams ohne DVR erscheint die native `Live`-Anzeige nun kompakt und
+  roetlich. Der redundante alte Reiter `Logo` und dessen separater
+  Darstellungsweg wurden entfernt; Logos werden ausschliesslich im
+  Player-Overlay eingerichtet.
+- Kanalbezogene Aktion `DVR-Inhalt loeschen` in der HLS-Konfiguration sowie
+  globale Aktion `Gesamten DVR-Inhalt loeschen` unter `Systemeinstellungen ->
+  DVR` ergaenzt. Beide Aktionen besitzen eine Sicherheitsabfrage.
+- Fuer eine konsistente neue Playlist werden aktive betroffene Kanaele vor
+  der DVR-Bereinigung kurz gestoppt und danach automatisch neu gestartet.
+  Poster, Overlays, Player- und Kanaleinstellungen sowie DVR-Inhalte anderer
+  Kanaele bleiben bei der kanalbezogenen Bereinigung erhalten.
+
+- Generierte Player-HTML- und Konfigurationsdateien vom fuenfminuetigen
+  Core-Disk-Cache ausgenommen. Der Player prueft die kleine gerenderte
+  Overlay-Textdatei nun alle fuenf Sekunden, waehrend JSON-Quellen weiterhin
+  nur im eingestellten Intervall abgerufen werden.
+- Der Overlay-Manager verarbeitet geaenderte Quellen und Vorlagen sofort,
+  auch wenn das normale JSON-Abrufintervall noch nicht abgelaufen ist.
+- Den vollstaendigen Overlay-Assistenten aus dem Player auch fuer
+  eingebrannten Text bereitgestellt: JSON-Pruefung, Felderkennung,
+  Schnellvorlagen, Feldgenerator, Expertenmodus und Vorschau.
+- DVR-Segmente werden bei aktiviertem DVR nicht mehr anhand einer aus der
+  nominellen Segmentlaenge errechneten Altersgrenze geloescht. Anzahlbasierte
+  Core-Bereinigung und FFmpegs `delete_segments` bleiben aktiv.
+- Der oeffentliche DVR-Player haelt beim Sprung an den Anfang zwei vollstaendige
+  Segmente Sicherheitsabstand zum aeltesten Playlist-Rand.
+- Neue RTSP-Stabilitaetsprofile `Standard`, `Stabil` und `Streng`. `Stabil`
+  erhoeht Queue und Puffer, erzwingt TCP, verwirft beschaedigte Pakete und
+  verwendet sorgfaeltige Decoderfehlererkennung. `Streng` beendet bei einem
+  Decoderfehler den Prozess und verbindet automatisch neu.
+- Regressionstests fuer unmittelbare Overlay-Aktualisierung, gemeinsamen
+  Assistenten, DVR-Sicherheitsrand, anzahlbasierte und manuelle
+  DVR-Bereinigung sowie alle drei RTSP-Profile.
+
+## 0.3.0-dev8 – 2026-09-15
+
+- Gefuehrten Assistenten fuer ressourcenschonende Player-Overlays ergaenzt:
+  Quellenname und JSON-Adresse koennen getrennt eingegeben, gespeichert und
+  direkt im Browser geprueft werden.
+- Die JSON-Pruefung zeigt verwendbare Felder und den gelieferten
+  `updated_at`-Zeitstempel an. Bei CORS-Sperren weist die Oberflaeche darauf
+  hin, dass der serverseitige Abruf nach dem Speichern dennoch funktionieren
+  kann.
+- Schnellvorlagen fuer Temperatur/Luftfeuchte, Webcamname/Standort,
+  Webcamname mit Wetter, Sponsorentext und eine leere eigene Vorlage.
+- Messwert-Baukasten fuer Feld, Beschriftung, Einheit und null bis drei
+  Nachkommastellen sowie eine Live-Vorschau mit den geprueften JSON-Daten.
+- Mehrere Quellen lassen sich anzeigen, bearbeiten und entfernen. Der freie
+  Expertenmodus `name=URL` bleibt vollstaendig erhalten.
+- Neue Positionen `oben mittig` und `unten mittig` fuer Playertext,
+  Playerlogos, eingebrannten Text und eingebrannte Logos.
+- Deutsche Oberflaechentexte, Regressionstests fuer JSON-Hilfsfunktionen und
+  mittige FFmpeg-/Player-Positionen sowie neue Bundle-Pruefung im Smoke-Test.
+
+## 0.3.0-dev7 – 2026-09-15
+
+- Eingabemaske fuer neue Netzwerkstreams auf einen eigenen lokalen
+  Formularzustand umgestellt. Tastatur- und Einfuegeereignisse bleiben damit
+  sofort sichtbar, auch wenn der uebergeordnete Assistent seinen Zustand erst
+  verzoegert oder gar nicht zurueckliefert.
+- URL, Benutzername und Passwort werden ueber eine synchrone Referenz
+  fortgeschrieben und anschliessend an den Restreamer-Assistenten uebergeben.
+  Dadurch kann kein veralteter Renderzustand neu eingegebene Zeichen ersetzen.
+- Dieselbe Absicherung gilt auch fuer die erweiterte Bearbeitungsansicht
+  bestehender Netzwerkquellen.
+- Zusaetzliche Attribute schliessen die Kamerafelder aus gaengigen
+  Passwortmanager-Autofill-Routinen aus.
+- Ein neuer Regressionstest bildet einen nicht antwortenden Elternzustand nach
+  und prueft, dass alle drei Felder trotzdem vollstaendig editierbar bleiben.
+- Der Container-Smoke-Test prueft nun ausserdem eine eindeutige dev7-Kennung
+  im kompilierten und tatsaechlich ausgelieferten JavaScript-Bundle.
+
+## 0.3.0-dev6 – 2026-09-15
+
+- Fehler im Assistenten fuer neue Netzwerkstreams behoben, durch den sich URL,
+  Benutzername und Passwort gegenseitig ueberschreiben oder nicht verlaesslich
+  eingeben beziehungsweise einfuegen liessen.
+- Netzwerk- und RTSP-Einstellungen werden nun unveraenderlich aktualisiert,
+  sodass React bei jedem Eingabeschritt einen eindeutig neuen Zustand erhaelt.
+- Den uebergeordneten Zustand des Einrichtungsassistenten ebenfalls auf
+  funktionale, unveraenderliche Aktualisierung umgestellt.
+- Eigene Feldnamen und Autocomplete-Regeln verhindern, dass der Browser
+  Zugangsdaten eines anderen Streams in die neuen Kamerafelder einmischt.
+- Neuer Regressionstest fuehrt den vollstaendigen Ablauf aus: RTSP-URL
+  einfuegen, Benutzernamen und Passwort eingeben und alle drei Werte erhalten.
+
+## 0.3.0-dev5 – 2026-09-15
+
+- Neues ressourcenschonendes Player-Overlay fuer H.264-/RTMP-Passthrough:
+  dynamischer Text und Logos werden im Browser ueber das Video gelegt, ohne
+  den Stream neu zu codieren.
+- Eigener Reiter `Player-Overlay` in den Player-Einstellungen jedes Streams.
+- Beliebig viele benannte HTTP(S)-JSON-Quellen, Vorlagen mit statischem Text
+  und Zahlenformatierung sowie Intervall, Position, Schrift, Textfarbe und
+  Hintergrund direkt im Webinterface konfigurierbar.
+- Bis zu zwei PNG-, JPEG- oder WebP-Logos mit Position, Breite, Deckkraft und
+  optionalem Link pro Player.
+- JSON-Quellen und Vorlagen werden nicht in die oeffentliche
+  Player-Konfiguration geschrieben; diese enthaelt nur den gerenderten Text
+  und validierte Darstellungswerte.
+- Dynamische `.txt`-Dateien sind vom fuenfminuetigen Core-Disk-Cache
+  ausgenommen, damit neue Messwerte im gewaehlten Intervall sichtbar werden.
+- Das vorhandene Burn-in-Overlay bleibt fuer Ausgaben erhalten, in denen Text
+  und Logos Bestandteil des Videos oder der Aufzeichnung sein muessen.
+
+## 0.3.0-dev4 – 2026-09-15
+
+- Zusaetzliches DVR-Panel mit Uhrzeitanzeige und separatem Live-Button oben
+  rechts aus dem oeffentlichen Player entfernt.
+- Den nativen Video.js-Live-Schalter in der unteren Bedienleiste mit einem
+  kompakten, zustandsabhaengigen Rahmen hervorgehoben, ohne die Leistenhoehe
+  oder deren Anordnung zu veraendern.
+
+## 0.3.0-dev3 – 2026-09-15
+
+- Vollstaendige Python-Standardbibliothek installiert, damit der Overlay-/DVR-
+  Manager `json` und `urllib.request` sicher laden kann.
+- Smoke-Test prueft die benoetigten Python-Module ausdruecklich und erkennt den
+  Managerprozess ueber die ungekürzte Prozessanzeige `ps auxww`.
+- Konfigurations- und Datenvolumes werden vor dem Start angelegt und in Compose
+  als extern verwaltet. Dadurch lassen sich vorhandene Testvolumes ohne
+  irrefuehrende Projektzuordnungswarnungen weiterverwenden.
+
+## 0.3.0-dev2 – 2026-09-15
+
+- Vollstaendiger, sauberer Neubau aus dem persistent gesicherten und per
+  SHA-256 sowie ZIP-Integritaet geprueften 0.3.0-dev1-Quellstand.
+- Alle Image-, Paket-, Installations- und Dokumentationskennungen auf dev2
+  angehoben, damit der Neubau eindeutig vom vorherigen Download getrennt ist.
+- Falschen Manager-Pfad im Container-Smoke-Test von `/usr/local/bin` auf den
+  tatsaechlichen Installationsort `/core/bin` korrigiert.
+- Funktionsumfang gegenueber dev1 unveraendert; erneute Tests und ein neuer
+  Produktionsbuild gehoeren zur Freigabepruefung dieses Pakets.
+
+## 0.3.0-dev1 – 2026-09-14
+
+- Streambezogene Overlay-Vorlagen mit statischem Text und dynamischen JSON-Werten.
+- Mehrere benannte JSON-Quellen pro Stream im Webinterface konfigurierbar.
+- Zwei hochladbare Logoebenen mit Position, Breite und Deckkraft.
+- Schrift- und Hintergrundfarbe sowie Hintergrunddeckkraft im Streamdialog.
+- Globale DVR-Dauer und Mindestfreiraum in den Systemeinstellungen.
+- DVR-Schalter pro Stream mit automatischer DiskFS-Konfiguration und Bereinigung.
+- Oeffentlicher Player mit Rueckspulzeitleiste, Uhrzeitanzeige und Rueckkehr zum Livebild.
+- Kompatibilitaetsmodus fuer die bisherige globale Overlay-Datei.
+
+## 0.2.0 – 2026-09-11
+
+- Erster eigenstaendig installierbarer Release Candidate.
+- Containername, Compose-Projekt, Image, Bind-Adresse, Ports und Volumes sind ueber `.env` konfigurierbar.
+- Standardinstallation laeuft isoliert neben einem offiziellen Restreamer.
+- Installer sichert bei Updates das eigene Konfigurationsvolume und lehnt den reservierten Containernamen `restreamer` ab.
+- Temperatur- und Feuchtewerte koennen mit null bis drei Dezimalstellen formatiert werden.
+- Standardbeschriftungen des Overlays sind `Temp` und `F`; Temperatur hat eine, Feuchte keine Nachkommastelle.
+- Installations-, Migrations-, Lizenz- und Fremdkomponentenhinweise wurden fuer die Weitergabe ergaenzt.
+
+## 0.1.0 Hotfix 6
+
+- Das dynamische Text-Overlay bietet vier installierte DejaVu-Schriftarten zur Auswahl.
+- Die Textfarbe ist über einen Farbwähler frei einstellbar.
+- Schriftart und Farbe werden gegen feste bzw. streng validierte Werte geprüft, bevor der FFmpeg-Filtergraph erzeugt wird.
+- Der Dialog erklärt nun eindeutig, dass er die fertige Textdatei auswählt und die Shelly-Quellen in `.env` konfiguriert werden.
+
+## 0.1.0 Hotfix 5
+
+- Overlay-Aktualisierer kann Temperatur und Luftfeuchte aus zwei getrennten JSON-URLs lesen.
+- Separate optionale HTTP-Header und jq-Ausdruecke je Messquelle werden unterstuetzt.
+- Die bisherige gemeinsame `OVERLAY_JSON_URL` bleibt abwaertskompatibel erhalten.
+- Eine identische gemeinsame Quelle wird pro Aktualisierung nur einmal abgerufen.
+
+## 0.1.0-hotfix4 – 2026-09-11
+
+- Core erkennt sowohl die drei Filter-Kennzeichnungsspalten älterer
+  FFmpeg-Versionen als auch das zweispaltige Format von FFmpeg 9. Dadurch
+  erscheinen alle Standardfilter sowie SetPTS und das dynamische Textoverlay
+  wieder im Einrichtungsassistenten.
+- Parser-Test enthält echte FFmpeg-9-Zeilen für `setpts` und `drawtext`.
+- Das Textoverlay weist in der Oberfläche auf die JSON-Konfiguration in `.env`
+  hin.
+
+## 0.1.0-hotfix3 – 2026-09-11
+
+- `ffmigrate` akzeptiert FFmpeg 7, 8 und 9 als gültige Zielversionen. Für
+  Version 6 bis 9 sind keine weiteren Umschreibungen gespeicherter
+  Prozessoptionen erforderlich.
+- Migrationstests decken sowohl einen vorhandenen FFmpeg-6-Kanal als auch
+  einen bereits auf FFmpeg 9 gespeicherten Kanal ab.
+
+## 0.1.0-hotfix2 – 2026-09-11
+
+- Maschinenlesbare FFmpeg-JSON-Zeilen werden auch bei Restreamers
+  `-loglevel level+info` ohne `[info]`-Präfix ausgegeben. Dadurch erkennt Core
+  den Fortschritt wieder und beendet aktive Streams nicht nach 30 Sekunden als
+  `stale`.
+- Die FFmpeg-9-Formatliste mit zusätzlichem Ausrichtungsleerzeichen wird vom
+  Core korrekt eingelesen; RTSP erscheint wieder als verfügbares Protokoll.
+- Smoke-Test prüft nun RTSP sowie `ffmpeg.inputs`, `ffmpeg.outputs` und
+  `ffmpeg.progress` unter denselben Logeinstellungen wie ein echter Kanal.
+- Core-Build führt den passenden Parser-Unit-Test aus.
+
+## 0.1.0-hotfix1 – 2026-09-11
+
+- FFmpeg-Laufzeitbibliotheken werden auf Ubuntu 24.04 merged-/usr-konform
+  unter `/usr/lib` abgelegt. Damit scheitert der Imagebau nicht mehr beim
+  Kopieren auf den vorhandenen `/lib`-Symlink.
+
+## 0.1.0 – 2026-09-11
+
+- FFmpeg 9.0.1 auf die Datarhei-JSON- und HLS-Erweiterungen portiert.
+- FFmpeg-9-Kompatibilität in der Restreamer-UI freigeschaltet.
+- Buildumgebung auf Go 1.27.1, Node.js 24.21.0, Alpine 3.24 und Caddy 2.11.4 angehoben.
+- SetPTS-Zeitstempelreparatur als auswählbaren Videofilter ergänzt.
+- Dynamisches Drawtext-Burn-in aus `/core/data/overlays/*.txt` ergänzt.
+- Optionalen JSON-Abruf für Temperatur und Luftfeuchte ergänzt.
+- Vollständig getrennte Testinstallation auf Ports 9080 und 9181 ergänzt.
+- Sicherung der produktiven Konfiguration vor dem Testbuild ergänzt.
+- Automatischen synthetischen Smoke-Test ergänzt.

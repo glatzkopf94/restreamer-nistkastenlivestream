@@ -1,0 +1,8 @@
+.env
+backups/
+dist/
+ui/build/
+ui/node_modules/
+*.log
+*.zip
+*.sha256

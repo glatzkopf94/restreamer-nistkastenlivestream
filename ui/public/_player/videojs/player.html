@@ -1,0 +1,881 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="description" content="{{description}}" />
+		<meta name="author" content="datarhei restreamer" />
+		<style>
+			html {
+				width: 100%;
+				height: 100%;
+			}
+			body {
+				margin: 0;
+				padding: 0;
+				width: 100%;
+				height: 100%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				overflow: hidden;
+				background: transparent;
+			}
+			#lc-player-shell {
+				--lc-player-ratio: 1.7777777778;
+				--lc-player-aspect: 16 / 9;
+				position: relative;
+				width: min(100vw, calc(100vh * var(--lc-player-ratio)));
+				height: min(100vh, calc(100vw / var(--lc-player-ratio)));
+				aspect-ratio: var(--lc-player-aspect);
+				overflow: hidden;
+				background: #000;
+			}
+			#player {
+				width: 100%;
+				height: 100%;
+				overflow: hidden;
+			}
+			#player.video-js.vjs-fluid {
+				height: 100%;
+				padding-top: 0;
+			}
+			#player .vjs-tech {
+				object-fit: contain;
+			}
+			#lc-player-overlay-root {
+				--lc-overlay-gap: 18px;
+				--lc-overlay-safe-width: 36px;
+				--lc-overlay-bottom: 82px;
+				--lc-overlay-font-size: 32px;
+				--lc-overlay-padding-y: 8px;
+				--lc-overlay-padding-x: 12px;
+				--lc-overlay-radius: 4px;
+				position: absolute;
+				inset: 0;
+				z-index: 12;
+				display: none;
+				overflow: hidden;
+				pointer-events: none;
+			}
+			.lc-player-overlay-item {
+				position: absolute;
+				box-sizing: border-box;
+				max-width: calc(100% - var(--lc-overlay-safe-width));
+			}
+			.lc-position-top-left {
+				top: var(--lc-overlay-gap);
+				left: var(--lc-overlay-gap);
+			}
+			.lc-position-top-center {
+				top: var(--lc-overlay-gap);
+				left: 50%;
+				transform: translateX(-50%);
+			}
+			.lc-position-top-right {
+				top: var(--lc-overlay-gap);
+				right: var(--lc-overlay-gap);
+			}
+			.lc-position-bottom-left {
+				bottom: var(--lc-overlay-bottom);
+				left: var(--lc-overlay-gap);
+			}
+			.lc-position-bottom-center {
+				bottom: var(--lc-overlay-bottom);
+				left: 50%;
+				transform: translateX(-50%);
+			}
+			.lc-position-bottom-right {
+				right: var(--lc-overlay-gap);
+				bottom: var(--lc-overlay-bottom);
+			}
+			#lc-player-overlay-text {
+				display: none;
+				font-size: var(--lc-overlay-font-size);
+				white-space: pre-wrap;
+				line-height: 1.25;
+				text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+			}
+			.lc-player-overlay-logo {
+				display: block;
+				max-width: none;
+				max-height: none;
+				height: auto;
+				object-fit: contain;
+			}
+			.lc-player-overlay-link {
+				display: block;
+				pointer-events: auto;
+			}
+			#lc-playback-gate {
+				position: absolute;
+				inset: 0;
+				z-index: 30;
+				display: none;
+				align-items: center;
+				justify-content: center;
+				box-sizing: border-box;
+				padding: 24px;
+				background: rgba(0, 0, 0, 0.72);
+				color: #fff;
+				font-family: Arial, Helvetica, sans-serif;
+				text-align: center;
+			}
+			#lc-playback-gate.is-visible {
+				display: flex;
+			}
+			#lc-playback-gate p {
+				margin: 0 0 16px;
+				font-size: clamp(15px, 2.5vw, 22px);
+				line-height: 1.35;
+			}
+			#lc-playback-gate button {
+				min-width: 180px;
+				padding: 12px 20px;
+				border: 2px solid currentColor;
+				border-radius: 4px;
+				background: rgba(0, 0, 0, 0.78);
+				color: #fff;
+				font: inherit;
+				font-size: 17px;
+				font-weight: 700;
+				cursor: pointer;
+			}
+			#lc-playback-gate button:focus-visible {
+				outline: 3px solid #fff;
+				outline-offset: 3px;
+			}
+		</style>
+		<title>{{name}}</title>
+		<link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+		<link
+			rel="alternate"
+			type="application/json+oembed"
+			href="channels/{{channelid}}/oembed.json"
+			title="{{name}}"
+		/>
+		<link
+			rel="alternate"
+			type="text/xml+oembed"
+			href="channels/{{channelid}}/oembed.xml"
+			title="{{name}}"
+		/>
+		<script src="channels/{{channelid}}/config.js"></script>
+		<link href="player/videojs/dist/video-js.min.css" rel="stylesheet" />
+		<link
+			href="player/videojs/dist/video-js-skin.min.css"
+			rel="stylesheet"
+		/>
+		<link
+			href="player/videojs/dist/videojs-overlay.min.css"
+			rel="stylesheet"
+		/>
+		<link
+			href="player/videojs/dist/videojs-license.min.css"
+			rel="stylesheet"
+		/>
+		{{#if airplay}}
+		<link
+			href="player/videojs/dist/videojs-airplay.min.css"
+			rel="stylesheet"
+		/>
+		{{/if}} {{#if chromecast}}
+		<link
+			href="player/videojs/dist/videojs-chromecast.min.css"
+			rel="stylesheet"
+		/>
+		{{/if}}
+	</head>
+	<body>
+		<div id="lc-player-shell">
+			<video
+				id="player"
+				class="vjs-public video-js"
+				controls
+				playsinline
+			></video>
+			<div id="lc-player-overlay-root" aria-hidden="true">
+				<div
+					id="lc-player-overlay-text"
+					class="lc-player-overlay-item"
+				></div>
+			</div>
+			<div id="lc-playback-gate" role="status" aria-live="polite">
+				<div>
+					<p id="lc-playback-gate-message"></p>
+					<button id="lc-playback-gate-button" type="button"></button>
+				</div>
+			</div>
+		</div>
+		<script src="player/videojs/dist/video.min.js"></script>
+		<script src="player/videojs/dist/videojs-overlay.min.js"></script>
+		<script src="player/videojs/dist/videojs-license.min.js"></script>
+		{{#if airplay}}
+		<script src="player/videojs/dist/videojs-airplay.min.js"></script>
+		{{/if}} {{#if chromecast}}
+		<script src="player/videojs/dist/videojs-chromecast.min.js"></script>
+		<script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+		{{/if}}
+		<script>
+			function getQueryParam(key, defaultValue) {
+				var query = window.location.search.substring(1);
+				var vars = query.split('&');
+				for (var i = 0; i < vars.length; i++) {
+					var pair = vars[i].split('=');
+					if (pair[0] == key) {
+						return pair[1];
+					}
+				}
+				return defaultValue;
+			}
+
+			function convertBoolParam(key, defaultValue) {
+				var val = getQueryParam(key, defaultValue);
+				return (
+					val === true ||
+					val === 'true' ||
+					val === '1' ||
+					val === 'yes' ||
+					val === 'on'
+				);
+			}
+
+			function convertColorParam(parameter, defaultColor) {
+				var re = new RegExp('^#([0-9a-f]{3}|[0-9a-f]{6})$');
+				var c = getQueryParam(parameter, defaultColor);
+				// decode color as # has to be represented by %23
+				var c = decodeURIComponent(c);
+				// if color was given without leading #, prepend it
+				if (!String(c).startsWith('#')) c = '#' + c;
+
+				if (re.test(c)) {
+					return c;
+				} else {
+					return defaultColor;
+				}
+			}
+
+			var autoplay = convertBoolParam('autoplay', playerConfig.autoplay);
+			var mute = convertBoolParam('mute', playerConfig.mute);
+			var statistics = convertBoolParam('stats', playerConfig.statistics);
+			var color = convertColorParam('color', playerConfig.color.buttons);
+			var playerPlayback = playerConfig.playback || {};
+			var playerShell = document.getElementById('lc-player-shell');
+			var playerAspectRatio =
+				playerPlayback.aspectRatio === '4:3' ? '4:3' : '16:9';
+			var applyPlayerAspectRatio = function (aspectRatio) {
+				playerAspectRatio = aspectRatio === '4:3' ? '4:3' : '16:9';
+				if (!playerShell) return;
+				playerShell.style.setProperty(
+					'--lc-player-ratio',
+					playerAspectRatio === '4:3' ? 4 / 3 : 16 / 9,
+				);
+				playerShell.style.setProperty(
+					'--lc-player-aspect',
+					playerAspectRatio === '4:3' ? '4 / 3' : '16 / 9',
+				);
+			};
+			applyPlayerAspectRatio(playerAspectRatio);
+
+			var viewerStorageKey = 'livechasing-viewer-id-v1';
+			var viewerToken = '';
+			var createViewerToken = function () {
+				if (window.crypto && window.crypto.randomUUID) {
+					return window.crypto.randomUUID();
+				}
+				return (
+					Date.now().toString(36) +
+					Math.random().toString(36).slice(2) +
+					Math.random().toString(36).slice(2)
+				).slice(0, 64);
+			};
+			try {
+				viewerToken =
+					window.localStorage.getItem(viewerStorageKey) || '';
+				if (!/^[A-Za-z0-9_-]{16,64}$/.test(viewerToken)) {
+					viewerToken = createViewerToken();
+					window.localStorage.setItem(viewerStorageKey, viewerToken);
+				}
+			} catch (e) {
+				// Without persistent storage the server falls back to an anonymized
+				// IP and user-agent combination for viewer deduplication.
+				viewerToken = '';
+			}
+			var publicSourceURL = new URL(
+				'/' + String(playerConfig.source || '').replace(/^\/+/, ''),
+				window.location.origin,
+			);
+			if (viewerToken)
+				publicSourceURL.searchParams.set('viewer', viewerToken);
+
+			var config = {
+				controls: true,
+				poster:
+					playerConfig.poster + '?t=' + String(new Date().getTime()),
+				autoplay: autoplay ? 'muted' : false,
+				muted: mute,
+				liveui: true,
+				responsive: true,
+				fluid: true,
+				aspectRatio: playerAspectRatio,
+				preload: 'metadata',
+				sources: [
+					{
+						src: publicSourceURL.toString(),
+						type: 'application/x-mpegURL',
+					},
+				],
+				plugins: {},
+			};
+
+			if (playerConfig.chromecast) {
+				config.techOrder = ['chromecast', 'html5'];
+				config.plugins.chromecast = {
+					receiverApplicationId: 'CC1AD845',
+				};
+			}
+
+			if (playerConfig.airplay) {
+				config.plugins.airPlay = {};
+			}
+
+			var player = videojs('player', config);
+			var publicPlayerSources = config.sources.slice();
+			var playbackGate = document.getElementById('lc-playback-gate');
+			var playbackGateMessage = document.getElementById(
+				'lc-playback-gate-message',
+			);
+			var playbackGateButton = document.getElementById(
+				'lc-playback-gate-button',
+			);
+			player.el().appendChild(playbackGate);
+
+			var germanPlayer = /^de(?:-|$)/i.test(
+				window.navigator.language || '',
+			);
+			var playbackGateReason = '';
+			var playbackActivationPending = false;
+			var playbackActivationTimeout = null;
+			var playbackTimer = null;
+			var playbackStartedAt = 0;
+			var playbackLimitMilliseconds =
+				Math.max(1, Number(playerPlayback.sessionLimitMinutes) || 15) *
+				60 *
+				1000;
+			var playbackRemainingMilliseconds = playbackLimitMilliseconds;
+			var playerToken =
+				(window.crypto && window.crypto.randomUUID
+					? window.crypto.randomUUID()
+					: Date.now() + '-' + Math.random()) +
+				':' +
+				String(playerConfig.channelid || 'stream');
+			var activePlayerStorageKey = 'livechasing-active-player-v1';
+			var activePlayerChannel = null;
+			var latestPlayerClaim = '';
+
+			var stopPlaybackTimer = function (preserveRemaining) {
+				if (playbackTimer !== null) {
+					window.clearTimeout(playbackTimer);
+					playbackTimer = null;
+				}
+				if (preserveRemaining && playbackStartedAt > 0) {
+					playbackRemainingMilliseconds = Math.max(
+						0,
+						playbackRemainingMilliseconds -
+							(Date.now() - playbackStartedAt),
+					);
+				}
+				playbackStartedAt = 0;
+			};
+
+			var showPlaybackGate = function (reason) {
+				var sessionLimit = reason === 'session';
+				playbackGateMessage.textContent = sessionLimit
+					? germanPlayer
+						? '15 Minuten erreicht. Zum Weiterschauen erneut Play drücken.'
+						: '15 minutes reached. Press Play again to continue watching.'
+					: germanPlayer
+						? 'Ein anderer Stream wurde aktiviert.'
+						: 'Another stream has been activated.';
+				playbackGateButton.textContent = sessionLimit
+					? germanPlayer
+						? '▶ Weiter ansehen'
+						: '▶ Continue watching'
+					: germanPlayer
+						? '▶ Diesen Stream aktivieren'
+						: '▶ Activate this stream';
+				playbackGate.classList.add('is-visible');
+			};
+
+			var clearPlaybackActivation = function () {
+				playbackActivationPending = false;
+				playbackGateButton.disabled = false;
+				if (playbackActivationTimeout !== null) {
+					window.clearTimeout(playbackActivationTimeout);
+					playbackActivationTimeout = null;
+				}
+			};
+
+			var deactivatePublicStream = function (reason) {
+				if (playbackGateReason === 'session' && reason !== 'session')
+					return;
+				if (
+					playbackGateReason === reason &&
+					playbackGate.classList.contains('is-visible')
+				) {
+					return;
+				}
+				clearPlaybackActivation();
+				playbackGateReason = reason;
+				stopPlaybackTimer(false);
+				playbackRemainingMilliseconds = playbackLimitMilliseconds;
+				player.pause();
+				player.reset();
+				player.poster(config.poster);
+				showPlaybackGate(reason);
+			};
+
+			var handlePlayerClaim = function (claim) {
+				if (
+					!playerPlayback.singleActiveStream ||
+					!claim ||
+					claim.type !== 'active-player' ||
+					claim.token === playerToken ||
+					typeof claim.id !== 'string' ||
+					claim.id <= latestPlayerClaim
+				) {
+					return;
+				}
+				latestPlayerClaim = claim.id;
+				deactivatePublicStream('single');
+			};
+
+			if (
+				playerPlayback.singleActiveStream &&
+				'BroadcastChannel' in window
+			) {
+				try {
+					activePlayerChannel = new BroadcastChannel(
+						'livechasing-active-player-v1',
+					);
+					activePlayerChannel.onmessage = function (event) {
+						handlePlayerClaim(event.data);
+					};
+				} catch (e) {
+					activePlayerChannel = null;
+				}
+			}
+
+			window.addEventListener('storage', function (event) {
+				if (
+					!playerPlayback.singleActiveStream ||
+					event.key !== activePlayerStorageKey ||
+					!event.newValue
+				) {
+					return;
+				}
+				try {
+					handlePlayerClaim(JSON.parse(event.newValue));
+				} catch (e) {
+					// Ignore malformed values from unrelated scripts.
+				}
+			});
+
+			var claimPublicStream = function () {
+				if (!playerPlayback.singleActiveStream) return;
+				var now = Date.now();
+				var claim = {
+					type: 'active-player',
+					token: playerToken,
+					channelid: String(playerConfig.channelid || ''),
+					id:
+						String(now).padStart(16, '0') +
+						':' +
+						playerToken +
+						':' +
+						Math.random(),
+				};
+				latestPlayerClaim = claim.id;
+				if (activePlayerChannel) activePlayerChannel.postMessage(claim);
+				try {
+					window.localStorage.setItem(
+						activePlayerStorageKey,
+						JSON.stringify(claim),
+					);
+				} catch (e) {
+					// BroadcastChannel is the primary path when storage is blocked.
+				}
+			};
+
+			var startPlaybackTimer = function () {
+				if (
+					!playerPlayback.sessionLimitEnabled ||
+					playbackTimer !== null ||
+					playbackGateReason
+				) {
+					return;
+				}
+				if (playbackRemainingMilliseconds <= 0) {
+					playbackRemainingMilliseconds = playbackLimitMilliseconds;
+				}
+				playbackStartedAt = Date.now();
+				playbackTimer = window.setTimeout(function () {
+					deactivatePublicStream('session');
+				}, playbackRemainingMilliseconds);
+			};
+
+			var activatePublicStream = function () {
+				if (playbackActivationPending) return;
+				var activationReason = playbackGateReason || 'single';
+				playbackActivationPending = true;
+				playbackGateButton.disabled = true;
+				playbackGateReason = '';
+				playbackRemainingMilliseconds = playbackLimitMilliseconds;
+				playbackGate.classList.remove('is-visible');
+				claimPublicStream();
+				player.error(null);
+				player.src(publicPlayerSources);
+				player.poster(config.poster);
+				var promise = player.play();
+				var restorePlaybackGate = function () {
+					if (!playbackActivationPending) return;
+					deactivatePublicStream(activationReason);
+				};
+				playbackActivationTimeout = window.setTimeout(
+					restorePlaybackGate,
+					12000,
+				);
+				if (promise && promise.catch) {
+					promise.catch(function (error) {
+						// Video.js may abort the first play promise while its HLS tech is
+						// being recreated. Let the playing event or timeout settle that
+						// harmless transition instead of resetting the source again.
+						if (error && error.name === 'AbortError') return;
+						restorePlaybackGate();
+					});
+				}
+			};
+
+			playbackGateButton.addEventListener('click', activatePublicStream);
+			player.on('playing', function () {
+				if (playbackGateReason) return;
+				clearPlaybackActivation();
+				claimPublicStream();
+				startPlaybackTimer();
+			});
+			player.on('pause', function () {
+				if (!playbackGateReason) stopPlaybackTimer(true);
+			});
+			player.on('loadedmetadata', function () {
+				if (!playerPlayback.autoAspectRatio) return;
+				var tech = player.tech && player.tech(true);
+				var video = tech && tech.el && tech.el();
+				if (!video || !video.videoWidth || !video.videoHeight) return;
+				var ratio = video.videoWidth / video.videoHeight;
+				var detected =
+					Math.abs(ratio - 4 / 3) < Math.abs(ratio - 16 / 9)
+						? '4:3'
+						: '16:9';
+				if (detected === playerAspectRatio) return;
+				applyPlayerAspectRatio(detected);
+				if (player.aspectRatio) player.aspectRatio(detected);
+			});
+			window.addEventListener('pagehide', function () {
+				clearPlaybackActivation();
+				stopPlaybackTimer(false);
+				if (activePlayerChannel) activePlayerChannel.close();
+			});
+
+			var playerOverlay = playerConfig.overlay || { enabled: false };
+			if (playerOverlay.enabled) {
+				var overlayRoot = document.getElementById(
+					'lc-player-overlay-root',
+				);
+				var overlayText = document.getElementById(
+					'lc-player-overlay-text',
+				);
+				// Keep the overlay inside the Video.js element so it remains visible
+				// when the player enters native/fullscreen mode.
+				player.el().appendChild(overlayRoot);
+				var overlayPositions = [
+					'top-left',
+					'top-center',
+					'top-right',
+					'bottom-left',
+					'bottom-center',
+					'bottom-right',
+				];
+				var overlayFonts = {
+					sans: 'Arial, Helvetica, sans-serif',
+					'sans-bold': 'Arial, Helvetica, sans-serif',
+					serif: 'Georgia, Times New Roman, serif',
+					mono: 'Courier New, monospace',
+				};
+				var clamp = function (value, minimum, maximum, fallback) {
+					value = Number(value);
+					return Math.min(
+						maximum,
+						Math.max(
+							minimum,
+							Number.isFinite(value) ? value : fallback,
+						),
+					);
+				};
+				var colorValue = function (value, fallback) {
+					return /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback;
+				};
+				var rgba = function (hex, opacity) {
+					var value = parseInt(
+						colorValue(hex, '#000000').slice(1),
+						16,
+					);
+					return (
+						'rgba(' +
+						((value >> 16) & 255) +
+						',' +
+						((value >> 8) & 255) +
+						',' +
+						(value & 255) +
+						',' +
+						clamp(opacity, 0, 1, 0.55) +
+						')'
+					);
+				};
+				var place = function (element, position) {
+					position =
+						overlayPositions.indexOf(position) === -1
+							? 'bottom-left'
+							: position;
+					element.classList.add('lc-position-' + position);
+				};
+				var overlayBaseFontSize = clamp(
+					playerOverlay.fontSize,
+					8,
+					200,
+					32,
+				);
+				var responsiveLogos = [];
+				var updatePlayerOverlayLayout = function () {
+					var playerElement = player.el();
+					var width = playerElement.clientWidth;
+					var height = playerElement.clientHeight;
+					if (!width || !height) return;
+					var scale = clamp(
+						Math.min(width / 1280, height / 720),
+						0.25,
+						1,
+						1,
+					);
+					var gap = 18 * scale;
+					overlayRoot.style.setProperty(
+						'--lc-overlay-gap',
+						gap + 'px',
+					);
+					overlayRoot.style.setProperty(
+						'--lc-overlay-safe-width',
+						gap * 2 + 'px',
+					);
+					overlayRoot.style.setProperty(
+						'--lc-overlay-bottom',
+						Math.max(54, 82 * scale) + 'px',
+					);
+					overlayRoot.style.setProperty(
+						'--lc-overlay-font-size',
+						overlayBaseFontSize * scale + 'px',
+					);
+					overlayRoot.style.setProperty(
+						'--lc-overlay-padding-y',
+						8 * scale + 'px',
+					);
+					overlayRoot.style.setProperty(
+						'--lc-overlay-padding-x',
+						12 * scale + 'px',
+					);
+					overlayRoot.style.setProperty(
+						'--lc-overlay-radius',
+						4 * scale + 'px',
+					);
+					responsiveLogos.forEach(function (logo) {
+						var ratio =
+							logo.image.naturalWidth && logo.image.naturalHeight
+								? logo.image.naturalWidth /
+									logo.image.naturalHeight
+								: 1;
+						var widthFromHeight = height * 0.45 * ratio;
+						logo.image.style.width =
+							Math.max(
+								1,
+								Math.min(
+									logo.baseWidth * scale,
+									width * 0.45,
+									widthFromHeight,
+								),
+							) + 'px';
+						logo.image.style.height = 'auto';
+					});
+				};
+
+				overlayRoot.style.display = 'block';
+				place(overlayText, playerOverlay.position);
+				overlayText.style.fontFamily =
+					overlayFonts[playerOverlay.font] || overlayFonts.sans;
+				overlayText.style.fontWeight =
+					playerOverlay.font === 'sans-bold' ? '700' : '400';
+				overlayText.style.color = colorValue(
+					playerOverlay.fontColor,
+					'#ffffff',
+				);
+				if (playerOverlay.box) {
+					overlayText.style.padding =
+						'var(--lc-overlay-padding-y) var(--lc-overlay-padding-x)';
+					overlayText.style.borderRadius = 'var(--lc-overlay-radius)';
+					overlayText.style.backgroundColor = rgba(
+						playerOverlay.boxColor,
+						playerOverlay.boxOpacity,
+					);
+				}
+
+				var refreshOverlayText = function () {
+					var path = String(playerOverlay.text || '').replace(
+						/^\/+/,
+						'',
+					);
+					if (!path) return;
+					fetch(
+						window.location.origin +
+							'/' +
+							path +
+							'?t=' +
+							Date.now(),
+						{ cache: 'no-store' },
+					)
+						.then(function (response) {
+							if (!response.ok)
+								throw new Error('overlay text unavailable');
+							return response.text();
+						})
+						.then(
+							function (text) {
+								overlayText.textContent = text.replace(
+									/\s+$/,
+									'',
+								);
+								overlayText.style.display =
+									overlayText.textContent ? 'block' : 'none';
+								// The manager fetches JSON at the configured source interval.
+								// Poll only the tiny rendered text file more frequently so saved
+								// template and source changes appear within a few seconds.
+								window.setTimeout(refreshOverlayText, 5000);
+							},
+							function () {
+								window.setTimeout(refreshOverlayText, 5000);
+							},
+						);
+				};
+				refreshOverlayText();
+
+				[playerOverlay.logo1, playerOverlay.logo2].forEach(
+					function (logo) {
+						if (!logo || !logo.enabled || !logo.path) return;
+						var image = document.createElement('img');
+						image.className = 'lc-player-overlay-logo';
+						image.alt = '';
+						image.src = String(logo.path).replace(/^\/+/, '');
+						image.style.opacity = clamp(logo.opacity, 0.05, 1, 1);
+						responsiveLogos.push({
+							image: image,
+							baseWidth: clamp(logo.width, 16, 2000, 240),
+						});
+						image.addEventListener(
+							'load',
+							updatePlayerOverlayLayout,
+						);
+
+						var item = image;
+						if (logo.link) {
+							var link = document.createElement('a');
+							link.className = 'lc-player-overlay-link';
+							link.href = logo.link;
+							link.target = '_blank';
+							link.rel = 'noopener noreferrer';
+							link.appendChild(image);
+							item = link;
+						}
+						item.classList.add('lc-player-overlay-item');
+						place(item, logo.position);
+						overlayRoot.appendChild(item);
+					},
+				);
+				updatePlayerOverlayLayout();
+				var overlayResizeObserver = null;
+				if ('ResizeObserver' in window) {
+					overlayResizeObserver = new ResizeObserver(
+						updatePlayerOverlayLayout,
+					);
+					overlayResizeObserver.observe(player.el());
+				} else {
+					window.addEventListener(
+						'resize',
+						updatePlayerOverlayLayout,
+					);
+				}
+				player.on('playerresize', updatePlayerOverlayLayout);
+				player.on('fullscreenchange', updatePlayerOverlayLayout);
+				player.on('dispose', function () {
+					if (overlayResizeObserver)
+						overlayResizeObserver.disconnect();
+					else
+						window.removeEventListener(
+							'resize',
+							updatePlayerOverlayLayout,
+						);
+				});
+			}
+
+			player.ready(function () {
+				player.license(playerConfig.license);
+
+				if (autoplay === true) {
+					// https://videojs.com/blog/autoplay-best-practices-with-video-js/
+					player.play();
+				}
+
+				if (playerConfig.dvr && playerConfig.dvr.enabled) {
+					player.addClass('vjs-live-dvr');
+					var dvrSeekGuard = false;
+					var dvrSegmentDuration = Number(
+						playerConfig.dvr.segmentDuration,
+					);
+					if (!Number.isFinite(dvrSegmentDuration)) {
+						dvrSegmentDuration = 2;
+					}
+					dvrSegmentDuration = Math.min(
+						30,
+						Math.max(1, dvrSegmentDuration),
+					);
+					player.on('seeking', function () {
+						if (dvrSeekGuard) return;
+						var ranges = player.seekable();
+						if (!ranges || ranges.length === 0) return;
+						var first = ranges.start(0);
+						var last = ranges.end(ranges.length - 1);
+						var safeStart = first + dvrSegmentDuration * 2;
+						if (
+							last - first > dvrSegmentDuration * 3 &&
+							player.currentTime() < safeStart
+						) {
+							dvrSeekGuard = true;
+							player.currentTime(safeStart);
+							window.setTimeout(function () {
+								dvrSeekGuard = false;
+							}, 0);
+						}
+					});
+				} else {
+					player.addClass('vjs-live-no-dvr');
+				}
+			});
+		</script>
+	</body>
+</html>

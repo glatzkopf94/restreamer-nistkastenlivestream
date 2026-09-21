@@ -1,0 +1,149 @@
+--- a/fftools/ffmpeg_demux.h
++++ b/fftools/ffmpeg_demux.h
+@@ -70,6 +70,8 @@
+     int                      autorotate;
+     int                      apply_cropping;
+     int                      force_display_matrix;
++    int                      force_mastering_display;
++    int                      force_content_light;
+     int                      drop_changed;
+ 
+ 
+@@ -98,13 +100,6 @@
+     uint64_t                 nb_packets;
+     // combined size of all the packets read
+     uint64_t                 data_size;
+-    // latest wallclock time at which packet reading resumed after a stall - used for readrate
+-    int64_t                  resume_wc;
+-    // timestamp of first packet sent after the latest stall - used for readrate
+-    int64_t                  resume_pts;
+-    // measure of how far behind packet reading is against spceified readrate
+-    int64_t                  lag;
+-
+     // Added by progress patch
+     uint64_t nb_keyframes;
+     int64_t last_keyframe_dts;
+@@ -154,6 +149,13 @@
+     double                readrate_initial_burst;
+     float                 readrate_catchup;
+ 
++    // latest wallclock time at which packet reading resumed after a stall - used for readrate
++    int64_t               resume_wc;
++    // relative timestamp of first packet sent after the latest stall - used for readrate
++    int64_t               resume_progress;
++    // measure of how far behind packet reading is against spceified readrate
++    int64_t               lag;
++
+     Scheduler            *sch;
+ 
+     AVPacket             *pkt_heartbeat;
+--- a/fftools/ffmpeg_demux.c
++++ b/fftools/ffmpeg_demux.c
+@@ -42,6 +42,8 @@
+ 
+ #include "libavformat/avformat.h"
+ 
++/* Demuxer structures are declared in ffmpeg_demux.h for JSON progress reporting. */
++#if 0
+ typedef struct DemuxStream {
+     InputStream              ist;
+ 
+@@ -164,8 +166,9 @@
+     // packet for reading from BSFs
+     AVPacket *pkt_bsf;
+ } DemuxThreadContext;
++#endif
+ 
+-static DemuxStream *ds_from_ist(InputStream *ist)
++DemuxStream *ds_from_ist(InputStream *ist)
+ {
+     return (DemuxStream*)ist;
+ }
+--- a/fftools/ffmpeg_mux.h
++++ b/fftools/ffmpeg_mux.h
+@@ -82,6 +82,18 @@
+     int             copy_prior_start;
+     int             streamcopy_started;
+ 
++    uint64_t        nb_packets;
++    uint64_t        nb_keyframes;
++    // number of frames/samples sent to the encoder
++    uint64_t        frames_encoded;
++    uint64_t        samples_encoded;
++
++    int64_t         last_keyframe_dts;
++    int64_t         last_keyframe_pktnb;
++    int64_t         nsamples_average;
++    double          sum_framerate, min_framerate, max_framerate, avg_framerate;
++    double          sum_gopsize, min_gopsize, max_gopsize, avg_gopsize;
++
+     AVRational      frame_rate;
+     AVRational      max_frame_rate;
+     int             force_fps;
+--- a/libavformat/hlsenc.c
++++ b/libavformat/hlsenc.c
+@@ -1488,6 +1488,8 @@
+         if (final) {
+             bandwidth = vs->max_bitrate;
+             avg_bandwidth = vs->avg_bitrate;
++            if (avg_bandwidth < 0)
++                avg_bandwidth = 0;
+         } else {
+             bandwidth = 0;
+             avg_bandwidth = 0;
+@@ -1495,6 +1497,18 @@
+                 bandwidth += get_stream_bit_rate(vid_st);
+             if (aud_st)
+                 bandwidth += get_stream_bit_rate(aud_st);
++
++            if (bandwidth == 0 && vs->scaled_cur_pts > vs->scaled_start_pts) {
++                // Estimate bandwidth for streams without declared bitrate.
++                bandwidth = (int)round((double)vs->bytes_written /
++                            (av_q2d(AV_TIME_BASE_Q) *
++                             (vs->scaled_cur_pts - vs->scaled_start_pts)) * 8);
++                if (bandwidth < 0)
++                    bandwidth = 0;
++
++                vs->bytes_written = 0;
++                vs->scaled_start_pts = vs->scaled_cur_pts;
++            }
+             bandwidth += bandwidth / 10;
+         }
+ 
+@@ -2429,7 +2443,7 @@
+     HLSContext *hls = s->priv_data;
+     AVFormatContext *oc = NULL;
+     AVStream *st = s->streams[pkt->stream_index];
+-    int64_t end_pts = 0, max_sequence = 0;
++    int64_t max_sequence = 0;
+     int is_ref_pkt = 1;
+     int ret = 0, can_split = 1, i, j;
+     int stream_index = 0;
+@@ -2490,14 +2504,9 @@
+         }
+     }
+ 
+-    end_pts = hls->recording_time * vs->number;
+-
+     if (vs->sequence - vs->nb_entries > hls->start_sequence && hls->init_time > 0) {
+-        /* reset end_pts, hls->recording_time at end of the init hls list */
+-        int64_t init_list_dur = hls->init_time * vs->nb_entries;
+-        int64_t after_init_list_dur = (vs->sequence - hls->start_sequence - vs->nb_entries) * hls->time;
++        /* Reset hls->recording_time at the end of the initial HLS list. */
+         hls->recording_time = hls->time;
+-        end_pts = init_list_dur + after_init_list_dur ;
+     }
+ 
+     if (vs->start_pts == AV_NOPTS_VALUE) {
+@@ -2541,8 +2550,9 @@
+     }
+ 
+     can_split = can_split && (pkt->pts - vs->end_pts > 0);
+-    if (vs->packets_written && can_split && (av_rescale_q(pkt->pts, st->time_base, AV_TIME_BASE_Q) - vs->start_pts
+-                                                          >= end_pts)) {
++    if (vs->packets_written && can_split &&
++        av_compare_ts(pkt->pts - vs->end_pts, st->time_base,
++                      hls->recording_time, AV_TIME_BASE_Q) >= 0) {
+         int64_t new_start_pos;
+         int byterange_mode = (hls->flags & HLS_SINGLE_FILE) || (hls->max_seg_size > 0);
+         double cur_duration;

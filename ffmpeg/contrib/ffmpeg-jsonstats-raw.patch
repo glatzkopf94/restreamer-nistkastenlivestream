@@ -1,0 +1,54 @@
+--- a/fftools/ffmpeg_json.c
++++ b/fftools/ffmpeg_json.c
+@@ -161,11 +161,7 @@
+ 
+     av_bprintf(&buf, "]");
+ 
+-    if (AV_LOG_INFO > av_log_get_level()) {
+-        fprintf(stderr, "%s\n", buf.str);
+-    } else {
+-        av_log(NULL, AV_LOG_INFO, "%s\n", buf.str);
+-    }
++    fprintf(stderr, "%s\n", buf.str);
+ 
+     fflush(stderr);
+ 
+@@ -355,11 +351,7 @@
+ 
+     av_bprintf(&buf, "]");
+ 
+-    if (AV_LOG_INFO > av_log_get_level()) {
+-        fprintf(stderr, "%s\n", buf.str);
+-    } else {
+-        av_log(NULL, AV_LOG_INFO, "%s\n", buf.str);
+-    }
++    fprintf(stderr, "%s\n", buf.str);
+ 
+     fflush(stderr);
+ 
+@@ -595,11 +587,7 @@
+     av_bprintf(&buf, "}");
+ 
+     if(print_jsonstats || is_last_report) {
+-        if (AV_LOG_INFO > av_log_get_level()) {
+-            fprintf(stderr, "%s\n", buf.str);
+-        } else {
+-            av_log(NULL, AV_LOG_INFO, "%s\n", buf.str);
+-        }
++        fprintf(stderr, "%s\n", buf.str);
+         fflush(stderr);
+     }
+ 
+@@ -842,11 +830,7 @@
+ 
+     av_bprintf(&buf, "]}");
+ 
+-    if (AV_LOG_INFO > av_log_get_level()) {
+-        fprintf(stderr, "%s\n", buf.str);
+-    } else {
+-        av_log(NULL, AV_LOG_INFO, "%s\n", buf.str);
+-    }
++    fprintf(stderr, "%s\n", buf.str);
+     fflush(stderr);
+ 
+     av_bprint_finalize(&buf, NULL);

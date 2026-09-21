@@ -1,0 +1,1459 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+
+import { useLingui } from '@lingui/react';
+import { Trans, t } from '@lingui/macro';
+import makeStyles from '@mui/styles/makeStyles';
+import urlparser from 'url-parse';
+import Accordion from '@mui/material/Accordion';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import Button from '@mui/material/Button';
+import Grid from '@mui/material/Grid';
+import Icon from '@mui/icons-material/AccountTree';
+import MenuItem from '@mui/material/MenuItem';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import WarningIcon from '@mui/icons-material/Warning';
+
+import BoxTextarea from '../../../misc/BoxTextarea';
+import BoxText from '../../../misc/BoxText';
+import Checkbox from '../../../misc/Checkbox';
+import FormInlineButton from '../../../misc/FormInlineButton';
+import MultiSelect from '../../../misc/MultiSelect';
+import Password from '../../../misc/Password';
+import Select from '../../../misc/Select';
+import Textarea from '../../../misc/Textarea';
+
+const useStyles = makeStyles((theme) => ({
+	gridContainer: {
+		marginTop: '0.5em',
+	},
+}));
+
+const initSettings = (initialSettings, config) => {
+	if (!initialSettings) {
+		initialSettings = {};
+	}
+
+	const settings = {
+		mode: 'pull',
+		address: '',
+		username: '',
+		password: '',
+		push: {},
+		rtsp: {},
+		srt: {},
+		http: {},
+		general: {},
+		...initialSettings,
+	};
+
+	settings.push = {
+		type: 'rtmp',
+		name: config.channelid,
+		...settings.push,
+	};
+
+	settings.rtsp = {
+		udp: false,
+		transport: 'tcp',
+		stimeout: 5000000,
+		stability: 'standard',
+		...settings.rtsp,
+	};
+	if (!['standard', 'stable', 'strict'].includes(settings.rtsp.stability)) {
+		settings.rtsp.stability = 'standard';
+	}
+
+	if (settings.rtsp.udp === true) {
+		settings.rtsp.transport = 'udp';
+	}
+
+	settings.srt = {
+		latency: 20,
+		...settings.srt,
+	};
+
+	settings.http = {
+		readNative: true,
+		forceFramerate: false,
+		framerate: 25,
+		userAgent: '',
+		referer: '',
+		http_proxy: '',
+		headers: '',
+		...settings.http,
+	};
+
+	settings.general = {
+		analyzeduration: 5_000_000, // microseconds, 5s
+		analyzeduration_rtmp: 3_000_000, // 3s
+		analyzeduration_http: 20_000_000, // 20s
+		probesize: 5_000_000, // bytes
+		max_probe_packets: 2500,
+		fflags: ['genpts'],
+		thread_queue_size: 512,
+		copyts: false,
+		start_at_zero: false,
+		use_wallclock_as_timestamps: false,
+		avoid_negative_ts: 'auto',
+		...settings.general,
+	};
+
+	settings.extentions = {
+		liveguard: 'none',
+		...settings.extentions,
+	};
+
+	return settings;
+};
+
+const initConfig = (initialConfig) => {
+	if (!initialConfig) {
+		initialConfig = {};
+	}
+
+	const config = {
+		rtmp: {},
+		srt: {},
+		hls: {},
+		channelid: 'external',
+		...initialConfig,
+	};
+
+	config.rtmp = {
+		enabled: false,
+		secure: false,
+		host: 'localhost',
+		local: 'localhost',
+		app: '',
+		token: '',
+		...config.rtmp,
+	};
+
+	config.srt = {
+		enabled: false,
+		host: 'localhost',
+		local: 'localhost',
+		token: '',
+		passphrase: '',
+		...config.srt,
+	};
+
+	config.hls = {
+		secure: false,
+		host: 'localhost',
+		local: 'localhost',
+		credentials: '',
+		...config.hls,
+	};
+
+	return config;
+};
+
+const initSkills = (initialSkills) => {
+	if (!initialSkills) {
+		initialSkills = {};
+	}
+
+	const skills = {
+		ffmpeg: {},
+		formats: {},
+		protocols: {},
+		...initialSkills,
+	};
+
+	skills.ffmpeg = {
+		version: '0.0.0',
+		version_major: 0,
+		version_minor: 0,
+		...skills.ffmpeg,
+	};
+
+	skills.formats = {
+		demuxers: [],
+		...skills.formats,
+	};
+
+	skills.protocols = {
+		input: [],
+		...skills.protocols,
+	};
+
+	if (skills.formats.demuxers.includes('rtsp')) {
+		if (!skills.protocols.input.includes('rtsp')) {
+			skills.protocols.input.push('rtsp');
+		}
+
+		if (skills.protocols.input.includes('tls')) {
+			if (!skills.protocols.input.includes('rtsps')) {
+				skills.protocols.input.push('rtsps');
+			}
+		}
+	}
+
+	return skills;
+};
+
+const createInputs = (settings, config, skills) => {
+	config = initConfig(config);
+	settings = initSettings(settings, config);
+	skills = initSkills(skills);
+
+	const input = {
+		address: '',
+		options: [],
+	};
+
+	if (settings.mode === 'push') {
+		let name = settings.push.name;
+		if (settings.push.type === 'hls') {
+			if (name === 'none') {
+				name = config.channelid;
+			}
+			input.address = getLocalHLS(name);
+		} else if (settings.push.type === 'rtmp') {
+			if (name === config.channelid) {
+				name += '.stream';
+			}
+			input.address = getLocalRTMP(name);
+		} else if (settings.push.type === 'srt') {
+			if (name === config.channelid) {
+				name += '.stream';
+			}
+			input.address = getLocalSRT(name, settings.srt.latency);
+		} else {
+			input.address = '';
+		}
+	} else {
+		input.address = settings.address;
+	}
+
+	// registrate protocol by address
+	const protocol = getProtocolClass(input.address);
+
+	const rtspStability = protocol === 'rtsp' ? settings.rtsp.stability : 'standard';
+	let inputFlags = [...settings.general.fflags];
+	let threadQueueSize = settings.general.thread_queue_size;
+	if (rtspStability !== 'standard') {
+		inputFlags = inputFlags.filter((flag) => flag !== 'nobuffer');
+		if (!inputFlags.includes('genpts')) inputFlags.push('genpts');
+		if (!inputFlags.includes('discardcorrupt')) inputFlags.push('discardcorrupt');
+		threadQueueSize = Math.max(2048, parseInt(threadQueueSize, 10) || 0);
+		input.livechasing = { rtspStability };
+	}
+
+	// general settings (pull/push)
+	if (inputFlags.length !== 0) {
+		input.options.push('-fflags', '+' + inputFlags.join('+'));
+	}
+	input.options.push('-thread_queue_size', threadQueueSize);
+	input.options.push('-probesize', settings.general.probesize);
+
+	if (settings.general.max_probe_packets !== 2500) {
+		input.options.push('-max_probe_packets', settings.general.max_probe_packets);
+	}
+	if (settings.general.copyts) {
+		input.options.push('-copyts');
+	}
+	if (settings.general.start_at_zero) {
+		input.options.push('-start_at_zero');
+	}
+	if (settings.general.use_wallclock_as_timestamps) {
+		input.options.push('-use_wallclock_as_timestamps', '1');
+	}
+	if (skills.ffmpeg.version_major >= 5 && settings.general.avoid_negative_ts !== 'auto') {
+		input.options.push('-avoid_negative_ts', settings.general.avoid_negative_ts);
+	}
+
+	// general settings > analyzeduration by protocol
+	//
+	// old settings:
+	// analyzeduration: 20s for http and 3s for rtmp streams
+	if (settings.mode === 'push') {
+		if (settings.push.type === 'hls') {
+			input.options.push('-analyzeduration', settings.general.analyzeduration_http);
+		} else if (settings.push.type === 'rtmp') {
+			input.options.push('-analyzeduration', settings.general.analyzeduration_rtmp);
+
+			if (skills.ffmpeg.version_major >= 6) {
+				const codecs = [];
+				if (skills.codecs.video.hevc?.length > 0) {
+					codecs.push('hvc1');
+				}
+				if (skills.codecs.video.av1?.length > 0) {
+					codecs.push('av01');
+				}
+				if (skills.codecs.video.vp9?.length > 0) {
+					codecs.push('vp09');
+				}
+
+				if (codecs.length !== 0) {
+					input.options.push('-rtmp_enhanced_codecs', codecs.join(','));
+				}
+			}
+		} else if (settings.push.type === 'srt') {
+			input.options.push('-analyzeduration', settings.general.analyzeduration);
+		}
+	} else {
+		input.address = addUsernamePassword(input.address, settings.username, settings.password);
+
+		if (protocol === 'http') {
+			input.options.push('-analyzeduration', settings.general.analyzeduration_http);
+
+			if (settings.http.readNative === true) {
+				input.options.push('-re');
+			}
+
+			if (settings.http.forceFramerate === true) {
+				input.options.push('-r', settings.http.framerate);
+			}
+
+			if (settings.http.userAgent.length !== 0) {
+				input.options.push('-user_agent', settings.http.userAgent);
+			}
+
+			if (settings.http.referer.length !== 0) {
+				input.options.push('-referer', settings.http.referer);
+			}
+
+			if (settings.http.headers.length !== 0) {
+				let headers = settings.http.headers
+					.split('\n')
+					.map((l) => l.trim())
+					.filter((l) => l.length > 0)
+					.join('\r\n');
+				input.options.push('-headers', headers + '\r\n');
+			}
+
+			if (settings.http.http_proxy.length !== 0) {
+				input.options.push('-http_proxy', settings.http.http_proxy);
+			}
+		} else if (protocol === 'rtmp') {
+			input.options.push('-analyzeduration', settings.general.analyzeduration_rtmp);
+
+			if (skills.ffmpeg.version_major >= 6) {
+				const codecs = [];
+				if (skills.codecs.video.hevc?.length > 0) {
+					codecs.push('hvc1');
+				}
+				if (skills.codecs.video.av1?.length > 0) {
+					codecs.push('av01');
+				}
+				if (skills.codecs.video.vp9?.length > 0) {
+					codecs.push('vp09');
+				}
+
+				if (codecs.length !== 0) {
+					input.options.push('-rtmp_enhanced_codecs', codecs.join(','));
+				}
+			}
+		} else {
+			input.options.push('-analyzeduration', settings.general.analyzeduration);
+
+			if (protocol === 'rtsp') {
+				if (skills.ffmpeg.version_major === 4) {
+					input.options.push('-stimeout', settings.rtsp.stimeout);
+				} else {
+					input.options.push('-timeout', settings.rtsp.stimeout);
+				}
+
+				input.options.push('-rtsp_transport', rtspStability === 'standard' ? settings.rtsp.transport : 'tcp');
+				if (rtspStability !== 'standard') {
+					input.options.push('-buffer_size', '8388608');
+					input.options.push('-max_delay', '1000000');
+				}
+			}
+		}
+	}
+
+	if (skills.protocols.input.includes('playout')) {
+		if (settings.extentions.liveguard === 'video') {
+			input.address = `playout:${input.address}`;
+			input.options.push('-playout_audio', '0');
+		} else if (settings.extentions.liveguard === 'video_audio') {
+			input.address = `playout:${input.address}`;
+			input.options.push('-playout_audio', '1');
+		}
+	}
+
+	return [input];
+};
+
+const addUsernamePassword = (address, username, password) => {
+	if (username.length === 0 && password.length === 0) {
+		return address;
+	}
+
+	if (isAuthProtocol(address) === false) {
+		return address;
+	}
+
+	const url = urlparser(address, {});
+	if (username.length !== 0) {
+		url.set('username', username);
+	}
+	if (password.length !== 0) {
+		url.set('password', password);
+	}
+
+	return url.toString();
+};
+
+const getProtocol = (url) => {
+	const re = new RegExp('^([a-z][a-z0-9.+-:]*)://', 'i');
+	const matches = url.match(re);
+
+	if (matches === null || matches.length === 0) {
+		return '';
+	}
+
+	return matches[1];
+};
+
+const getProtocolClass = (url) => {
+	if (typeof url !== 'string') {
+		url = '';
+	}
+
+	const protocol = getProtocol(url);
+	if (protocol.length === 0) {
+		return '';
+	}
+
+	if (/rtmp(e|s|t)?/.test(protocol) === true) {
+		return 'rtmp';
+	} else if (/https?/.test(protocol) === true) {
+		return 'http';
+	} else if (/mms(t|h)/.test(protocol) === true) {
+		return 'mms';
+	} else if (/rtsps?/.test(protocol) === true) {
+		return 'rtsp';
+	}
+
+	return protocol;
+};
+
+const isAuthProtocol = (url) => {
+	const protocolClass = getProtocolClass(url);
+
+	// eslint-disable-next-line default-case
+	switch (protocolClass) {
+		case 'amqp':
+		case 'ftp':
+		case 'http':
+		case 'icecast':
+		case 'mms':
+		case 'rtmp':
+		case 'sftp':
+		case 'rtsp':
+			return true;
+	}
+
+	return false;
+};
+
+const isSupportedProtocol = (url, supportedProtocols) => {
+	const protocol = getProtocol(url);
+	if (protocol.length === 0) {
+		return false;
+	}
+
+	if (!supportedProtocols.includes(protocol)) {
+		return false;
+	}
+
+	return true;
+};
+
+const getHLSAddress = (host, credentials, name, secure) => {
+	// Test for IPv6 addresses and put brackets around
+	let url = 'http' + (secure ? 's' : '') + '://' + (credentials.length !== 0 ? credentials + '@' : '') + host + '/memfs/' + name + '.m3u8';
+
+	return url;
+};
+
+const getRTMPAddress = (host, app, name, token, secure) => {
+	let url = 'rtmp' + (secure ? 's' : '') + '://' + host + app + '/' + name + '.stream';
+
+	if (token.length !== 0) {
+		url += '/' + encodeURIComponent(token);
+	}
+
+	return url;
+};
+
+const getSRTAddress = (host, name, token, passphrase, publish) => {
+	let url =
+		'srt' +
+		'://' +
+		host +
+		'?mode=caller&transtype=live&streamid=' +
+		name +
+		'.stream,mode:' +
+		(publish ? 'publish' : 'request') +
+		(token.length !== 0 ? ',token:' + encodeURIComponent(token) : '');
+
+	if (passphrase.length !== 0) {
+		url += '&passphrase=' + encodeURIComponent(passphrase);
+	}
+
+	url += '&latency=120000';
+
+	return url;
+};
+
+const getHLS = (config, name) => {
+	const url = getHLSAddress(config.hls.host, config.hls.credentials, config.channelid, config.hls.secure);
+
+	return url;
+};
+
+const getRTMP = (config) => {
+	const url = getRTMPAddress(config.rtmp.host, config.rtmp.app, config.channelid, config.rtmp.token, config.rtmp.secure);
+
+	return url;
+};
+
+const getSRT = (config) => {
+	const url = getSRTAddress(config.srt.host, config.channelid, config.srt.token, config.srt.passphrase, true);
+
+	return url;
+};
+
+const getLocalHLS = (config, name) => {
+	let url = getHLSAddress(config.hls.local, '', config.channelid, false);
+
+	return url;
+};
+
+const getLocalRTMP = (name) => {
+	return '{rtmp,name=' + name + '}';
+};
+
+const getLocalSRT = (name, latency) => {
+	return '{srt,name=' + name + ',mode=request,latency=' + latency * 1000 + '}';
+};
+
+const isValidURL = (address) => {
+	const protocol = getProtocolClass(address);
+	if (protocol.length === 0) {
+		return false;
+	}
+
+	return true;
+};
+
+function AdvancedSettings({ settings = {}, onChange = function (settings) {} }) {
+	let protocolClass = getProtocolClass(settings.address);
+	if (settings.mode === 'push') {
+		switch (settings.push.type) {
+			case 'rtmp':
+				protocolClass = 'rtmp';
+				break;
+			case 'srt':
+				protocolClass = 'srt';
+				break;
+			default:
+		}
+	}
+
+	return (
+		<Grid item xs={12}>
+			<Accordion className="accordion">
+				<AccordionSummary elevation={0} expandIcon={<ArrowDropDownIcon />}>
+					<Typography>
+						<Trans>Advanced settings</Trans>
+					</Typography>
+				</AccordionSummary>
+				<AccordionDetails>
+					<Grid container spacing={2}>
+						{protocolClass === 'rtsp' && (
+							<React.Fragment>
+								<Grid item xs={12}>
+									<Typography variant="h3">
+										<Trans>RTSP</Trans>
+									</Typography>
+								</Grid>
+								<Grid item xs={12}>
+									<Select
+										type="select"
+										label={<Trans>RTSP stability profile</Trans>}
+										value={settings.rtsp.stability}
+										onChange={onChange('rtsp', 'stability')}
+									>
+										<MenuItem value="standard">
+											<Trans>Standard</Trans>
+										</MenuItem>
+										<MenuItem value="stable">
+											<Trans>Stable</Trans>
+										</MenuItem>
+										<MenuItem value="strict">
+											<Trans>Strict</Trans>
+										</MenuItem>
+									</Select>
+									<Typography variant="caption" display="block">
+										{settings.rtsp.stability === 'standard' && (
+											<Trans>Original Restreamer buffering and permissive decoder error handling.</Trans>
+										)}
+										{settings.rtsp.stability === 'stable' && (
+											<Trans>TCP, a larger input queue and buffer, corrupt packet rejection and careful decoder error handling.</Trans>
+										)}
+										{settings.rtsp.stability === 'strict' && (
+											<Trans>
+												Like Stable, but a decoder error stops and reconnects the process instead of forwarding damaged pictures.
+											</Trans>
+										)}
+									</Typography>
+								</Grid>
+								<Grid item xs={12}>
+									<Select
+										type="select"
+										label={<Trans>Transport</Trans>}
+										value={settings.rtsp.stability === 'standard' ? settings.rtsp.transport : 'tcp'}
+										disabled={settings.rtsp.stability !== 'standard'}
+										onChange={onChange('rtsp', 'transport')}
+									>
+										<MenuItem value="udp">UDP</MenuItem>
+										<MenuItem value="tcp">TCP</MenuItem>
+										<MenuItem value="udpmulticast">UDP multicast</MenuItem>
+										<MenuItem value="http">HTTP tunneling</MenuItem>
+										<MenuItem value="https">HTTPS tunneling</MenuItem>
+									</Select>
+								</Grid>
+								<Grid item xs={12}>
+									<TextField
+										variant="outlined"
+										type="number"
+										min="0"
+										step="1"
+										fullWidth
+										label={<Trans>Socket timeout (microseconds)</Trans>}
+										value={settings.rtsp.stimeout}
+										onChange={onChange('rtsp', 'stimeout')}
+									/>
+								</Grid>
+							</React.Fragment>
+						)}
+						{protocolClass === 'srt' && settings.mode === 'push' && (
+							<React.Fragment>
+								<Grid item xs={12}>
+									<Typography variant="h3">
+										<Trans>SRT</Trans>
+									</Typography>
+								</Grid>
+								<Grid item xs={12}>
+									<TextField
+										variant="outlined"
+										fullWidth
+										label={<Trans>Latency (milliseconds)</Trans>}
+										value={settings.srt.latency}
+										onChange={onChange('srt', 'latency')}
+									/>
+									<Typography variant="caption">
+										<Trans>Internal SRT latency in milliseconds.</Trans>
+									</Typography>
+								</Grid>
+							</React.Fragment>
+						)}
+						{protocolClass === 'http' && (
+							<React.Fragment>
+								<Grid item xs={12}>
+									<Typography variant="h3">
+										<Trans>HTTP and HTTPS</Trans>
+									</Typography>
+								</Grid>
+								<Grid item xs={12}>
+									<Checkbox
+										label={<Trans>Read input at native speed</Trans>}
+										checked={settings.http.readNative}
+										onChange={onChange('http', 'readNative')}
+									/>
+									<Checkbox
+										label={<Trans>Force input framerate</Trans>}
+										checked={settings.http.forceFramerate}
+										onChange={onChange('http', 'forceFramerate')}
+									/>
+								</Grid>
+								{settings.http.forceFramerate === true && (
+									<Grid item xs={12}>
+										<TextField
+											variant="outlined"
+											type="number"
+											min="0"
+											step="1"
+											fullWidth
+											label={<Trans>Framerate</Trans>}
+											value={settings.http.framerate}
+											onChange={onChange('http', 'framerate')}
+										/>
+									</Grid>
+								)}
+								<Grid item xs={12}>
+									<TextField
+										variant="outlined"
+										fullWidth
+										label="User-Agent"
+										value={settings.http.userAgent}
+										onChange={onChange('http', 'userAgent')}
+									/>
+								</Grid>
+								<Grid item xs={12}>
+									<TextField
+										variant="outlined"
+										fullWidth
+										label="Referrer"
+										value={settings.http.referer}
+										onChange={onChange('http', 'referer')}
+									/>
+								</Grid>
+								<Grid item xs={12}>
+									<TextField
+										variant="outlined"
+										fullWidth
+										multiline
+										label="Headers"
+										value={settings.http.headers}
+										onChange={onChange('http', 'headers')}
+									/>
+									<Typography variant="caption">
+										<Trans>List of additional HTTP headers, one per line.</Trans>
+									</Typography>
+								</Grid>
+								<Grid item xs={12}>
+									<TextField
+										variant="outlined"
+										fullWidth
+										label="HTTP proxy"
+										value={settings.http.http_proxy}
+										onChange={onChange('http', 'http_proxy')}
+										placeholder="https://123.123.123.123:443"
+									/>
+								</Grid>
+							</React.Fragment>
+						)}
+						<Grid item xs={12}>
+							<Typography variant="h3">
+								<Trans>General</Trans>
+							</Typography>
+						</Grid>
+						<Grid item xs={12}>
+							<TextField
+								variant="outlined"
+								type="number"
+								min="0"
+								step="1"
+								fullWidth
+								label="thread_queue_size"
+								value={settings.general.thread_queue_size}
+								onChange={onChange('general', 'thread_queue_size')}
+							/>
+						</Grid>
+						<Grid item xs={12}>
+							<TextField
+								variant="outlined"
+								type="number"
+								min="32"
+								step="1"
+								fullWidth
+								label="probesize (bytes)"
+								value={settings.general.probesize}
+								onChange={onChange('general', 'probesize')}
+							/>
+							<Typography variant="caption">
+								<Trans>
+									Mininum {32}, default {5000000}
+								</Trans>
+							</Typography>
+						</Grid>
+						<Grid item xs={12}>
+							<TextField
+								variant="outlined"
+								type="number"
+								min="1"
+								step="1"
+								fullWidth
+								label="max_probe_packets"
+								value={settings.general.max_probe_packets}
+								onChange={onChange('general', 'max_probe_packets')}
+							/>
+							<Typography variant="caption">
+								<Trans>Default {2500}</Trans>
+							</Typography>
+						</Grid>
+						<Grid item xs={12}>
+							<TextField
+								variant="outlined"
+								type="number"
+								min="1"
+								step="1"
+								fullWidth
+								label="analyzeduration (microseconds)"
+								value={
+									settings.mode === 'push'
+										? settings.push.type === 'hls'
+											? settings.general.analyzeduration_http
+											: settings.push.type === 'rtmp'
+												? settings.general.analyzeduration_rtmp
+												: settings.general.analyzeduration
+										: protocolClass === 'http'
+											? settings.general.analyzeduration_http
+											: protocolClass === 'rtmp'
+												? settings.general.analyzeduration_rtmp
+												: settings.general.analyzeduration
+								}
+								onChange={onChange(
+									'general',
+									settings.mode === 'push'
+										? settings.push.type === 'hls'
+											? 'analyzeduration_http'
+											: settings.push.type === 'rtmp'
+												? 'analyzeduration_rtmp'
+												: 'analyzeduration'
+										: protocolClass === 'http'
+											? 'analyzeduration_http'
+											: protocolClass === 'rtmp'
+												? 'analyzeduration_rtmp'
+												: 'analyzeduration',
+								)}
+							/>
+							<Typography variant="caption">
+								<Trans>
+									Default {5000000} ({5} seconds)
+								</Trans>
+							</Typography>
+						</Grid>
+						<Grid item xs={12}>
+							<MultiSelect
+								type="select"
+								label="flags"
+								value={settings.general.fflags}
+								onChange={onChange('general', 'fflags')}
+								items={[
+									{ value: 'discardcorrupt' },
+									{ value: 'fastseek' },
+									{ value: 'genpts' },
+									{ value: 'igndts' },
+									{ value: 'ignidx' },
+									{ value: 'nobuffer' },
+									{ value: 'nofillin' },
+									{ value: 'noparse' },
+									{ value: 'sortdts' },
+								]}
+							></MultiSelect>
+						</Grid>
+						<Grid item xs={12}>
+							<Checkbox label={<Trans>copyts</Trans>} checked={settings.general.copyts} onChange={onChange('general', 'copyts')} />
+							<Checkbox
+								label={<Trans>start_at_zero</Trans>}
+								checked={settings.general.start_at_zero}
+								onChange={onChange('general', 'start_at_zero')}
+							/>
+							<Checkbox
+								label={<Trans>use_wallclock_as_timestamps</Trans>}
+								checked={settings.general.use_wallclock_as_timestamps}
+								onChange={onChange('general', 'use_wallclock_as_timestamps')}
+							/>
+						</Grid>
+						<Grid item xs={12}>
+							<Select
+								type="select"
+								label={<Trans>avoid_negative_ts</Trans>}
+								value={settings.general.avoid_negative_ts}
+								onChange={onChange('general', 'avoid_negative_ts')}
+							>
+								<MenuItem value="make_non_negative">make_non_negative</MenuItem>
+								<MenuItem value="make_zero">make_zero</MenuItem>
+								<MenuItem value="auto">auto (default)</MenuItem>
+								<MenuItem value="disabled">disabled</MenuItem>
+							</Select>
+						</Grid>
+					</Grid>
+				</AccordionDetails>
+			</Accordion>
+		</Grid>
+	);
+}
+
+function ExtentionSettings({ settings = {}, skills = {}, onChange = function (settings) {} }) {
+	if (!skills.protocols.input.includes('playout')) return null;
+	return (
+		<Grid item xs={12}>
+			<Accordion className="accordion">
+				<AccordionSummary elevation={0} expandIcon={<ArrowDropDownIcon />}>
+					<Typography>
+						<Trans>Extention settings</Trans>
+					</Typography>
+				</AccordionSummary>
+				<AccordionDetails>
+					<Grid container spacing={2}>
+						<Grid item xs={12}>
+							<Select
+								type="select"
+								label={<Trans>Live stabilization</Trans>}
+								value={settings.extentions.liveguard}
+								onChange={onChange('extentions', 'liveguard')}
+							>
+								<MenuItem value="none">
+									<Trans>Protect: None</Trans>
+								</MenuItem>
+								<MenuItem value="video">
+									<Trans>Protect: Video channel</Trans>
+								</MenuItem>
+								<MenuItem value="video_audio">
+									<Trans>Protect: Video and audio channel</Trans>
+								</MenuItem>
+							</Select>
+						</Grid>
+					</Grid>
+				</AccordionDetails>
+			</Accordion>
+		</Grid>
+	);
+}
+
+function Pull({
+	knownDevices = [],
+	settings = {},
+	config = {},
+	skills = null,
+	onChange = function (settings) {},
+	onProbe = function (settings, inputs) {},
+	onRefresh = function () {},
+}) {
+	const classes = useStyles();
+	const authProtocol = isAuthProtocol(settings.address);
+	const validURL = isValidURL(settings.address);
+	const supportedProtocol = isSupportedProtocol(settings.address, skills.protocols.input);
+
+	return (
+		<Grid container alignItems="flex-start" spacing={2} className={classes.gridContainer}>
+			<Grid item xs={12}>
+				<Typography>
+					<Trans>Enter the address of your network source:</Trans>
+				</Typography>
+			</Grid>
+			<Grid item xs={12}>
+				<TextField
+					variant="outlined"
+					fullWidth
+					label={<Trans>Address</Trans>}
+					placeholder="rtsp://ip:port/path"
+					value={settings.address}
+					onChange={onChange('', 'address')}
+					name="network-source-address"
+					autoComplete="off"
+					spellCheck={false}
+					inputProps={{
+						'data-livechasing-input-state': 'local-draft-v2',
+						'data-form-type': 'other',
+						'data-lpignore': 'true',
+						'data-1p-ignore': 'true',
+					}}
+				/>
+				<Typography variant="caption">
+					<Trans>Supports HTTP (HLS, DASH), RTP, RTSP, RTMP, SRT and more.</Trans>
+				</Typography>
+			</Grid>
+			{validURL === true && (
+				<React.Fragment>
+					{!supportedProtocol ? (
+						<Grid item xs={12} align="center">
+							<BoxText color="dark">
+								<WarningIcon fontSize="large" color="error" />
+								<Typography>
+									<Trans>This protocol is unknown or not supported by the available FFmpeg binary.</Trans>
+								</Typography>
+							</BoxText>
+						</Grid>
+					) : (
+						<React.Fragment>
+							{authProtocol && (
+								<React.Fragment>
+									<Grid item md={6} xs={12}>
+										<TextField
+											variant="outlined"
+											fullWidth
+											label={<Trans>Username</Trans>}
+											value={settings.username}
+											onChange={onChange('', 'username')}
+											name="network-source-username"
+											autoComplete="off"
+											inputProps={{
+												'data-livechasing-input-state': 'local-draft-v2',
+												'data-form-type': 'other',
+												'data-lpignore': 'true',
+												'data-1p-ignore': 'true',
+											}}
+										/>
+										<Typography variant="caption">
+											<Trans>Username for the device.</Trans>
+										</Typography>
+									</Grid>
+									<Grid item md={6} xs={12}>
+										<Password
+											variant="outlined"
+											fullWidth
+											label={<Trans>Password</Trans>}
+											value={settings.password}
+											onChange={onChange('', 'password')}
+											id="network-source-password"
+											name="network-source-password"
+											autoComplete="new-password"
+											inputProps={{
+												'data-livechasing-input-state': 'local-draft-v2',
+												'data-form-type': 'other',
+												'data-lpignore': 'true',
+												'data-1p-ignore': 'true',
+											}}
+										/>
+										<Typography variant="caption">
+											<Trans>Password for the device.</Trans>
+										</Typography>
+									</Grid>
+								</React.Fragment>
+							)}
+							<AdvancedSettings settings={settings} onChange={onChange} />
+							<ExtentionSettings settings={settings} skills={skills} onChange={onChange} />
+						</React.Fragment>
+					)}
+				</React.Fragment>
+			)}
+			<Grid item xs={12}>
+				<FormInlineButton disabled={!validURL || !supportedProtocol} onClick={onProbe}>
+					<Trans>Probe</Trans>
+				</FormInlineButton>
+			</Grid>
+		</Grid>
+	);
+}
+
+function Push({
+	knownDevices = [],
+	settings = {},
+	config = {},
+	skills = null,
+	onChange = function (settings) {},
+	onProbe = function (settings, inputs) {},
+	onRefresh = function () {},
+}) {
+	const classes = useStyles();
+
+	//const supportsHLS = isSupportedProtocol('http://', skills.protocols.input);
+	const supportsRTMP = isSupportedProtocol('rtmp://', skills.protocols.input);
+	const supportsSRT = isSupportedProtocol('srt://', skills.protocols.input);
+
+	if (!supportsRTMP && !supportsSRT) {
+		return (
+			<Grid container alignItems="flex-start" spacing={2} className={classes.gridContainer}>
+				<Grid item xs={12} align="center">
+					<BoxText color="dark">
+						<WarningIcon fontSize="large" color="error" />
+						<Typography>
+							<Trans>The available FFmpeg binary doesn't support any of the required protocols.</Trans>
+						</Typography>
+					</BoxText>
+				</Grid>
+			</Grid>
+		);
+	}
+
+	return (
+		<React.Fragment>
+			<Grid container alignItems="flex-start" spacing={2} className={classes.gridContainer}>
+				<Grid item xs={12}>
+					<Select type="select" label={<Trans>Protocol</Trans>} value={settings.push.type} onChange={onChange('push', 'type')}>
+						<MenuItem value="rtmp" disabled={!supportsRTMP}>
+							RTMP
+						</MenuItem>
+						<MenuItem value="srt" disabled={!supportsSRT}>
+							SRT
+						</MenuItem>
+					</Select>
+				</Grid>
+			</Grid>
+			{settings.push.type === 'rtmp' && (
+				<PushRTMP
+					knownDevices={knownDevices}
+					settings={settings}
+					config={config}
+					skills={skills}
+					onChange={onChange}
+					onProbe={onProbe}
+					onRefresh={onRefresh}
+				/>
+			)}
+			{settings.push.type === 'hls' && <PushHLS settings={settings} config={config} skills={skills} onChange={onChange} onProbe={onProbe} />}
+			{settings.push.type === 'srt' && (
+				<PushSRT
+					knownDevices={knownDevices}
+					settings={settings}
+					config={config}
+					skills={skills}
+					onChange={onChange}
+					onProbe={onProbe}
+					onRefresh={onRefresh}
+				/>
+			)}
+		</React.Fragment>
+	);
+}
+
+function PushHLS({ settings = {}, config = {}, skills = {}, onChange = function (settings) {}, onProbe = function (settings, inputs) {} }) {
+	const classes = useStyles();
+
+	const HLS = getHLS(config);
+
+	return (
+		<Grid container alignItems="flex-start" spacing={2} className={classes.gridContainer}>
+			<Grid item xs={12}>
+				<Typography>
+					<Trans>Send stream to this address:</Trans>
+				</Typography>
+			</Grid>
+			<Grid item xs={12}>
+				<BoxTextarea>
+					<Textarea rows={1} value={HLS} readOnly allowCopy />
+				</BoxTextarea>
+			</Grid>
+			<AdvancedSettings settings={settings} onChange={onChange} />
+			<ExtentionSettings settings={settings} skills={skills} onChange={onChange} />
+			<Grid item xs={12}>
+				<FormInlineButton onClick={onProbe}>
+					<Trans>Probe</Trans>
+				</FormInlineButton>
+			</Grid>
+		</Grid>
+	);
+}
+
+function PushRTMP({
+	knownDevices = [],
+	settings = {},
+	config = {},
+	skills = {},
+	onChange = function (settings) {},
+	onProbe = function (settings, inputs) {},
+	onRefresh = function () {},
+}) {
+	const { i18n } = useLingui();
+	const classes = useStyles();
+	const navigate = useNavigate();
+
+	let form = null;
+
+	if (config.rtmp.enabled === false) {
+		form = (
+			<Grid container alignItems="flex-start" spacing={2} className={classes.gridContainer}>
+				<Grid item xs={12}>
+					<Typography>
+						<Trans>RTMP server is not enabled</Trans>
+					</Typography>
+				</Grid>
+				<Grid item xs={12}>
+					<Button variant="outlined" size="large" fullWidth color="primary" onClick={() => navigate('/settings/rtmp')}>
+						<Trans>Enable RTMP server ...</Trans>
+					</Button>
+				</Grid>
+			</Grid>
+		);
+	} else {
+		const RTMP = getRTMP(config);
+
+		const filteredDevices = knownDevices.filter((device) => device.media === 'rtmp');
+		const options = filteredDevices.map((device) => {
+			return (
+				<MenuItem key={device.id} value={device.id}>
+					{device.name}
+				</MenuItem>
+			);
+		});
+
+		options.unshift(
+			<MenuItem key="none" value="none" disabled>
+				{i18n._(t`Choose an input stream ...`)}
+			</MenuItem>,
+		);
+
+		options.push(
+			<MenuItem key={config.channelid} value={config.channelid}>
+				{i18n._(t`Send stream to address ...`)}
+			</MenuItem>,
+		);
+
+		form = (
+			<Grid container alignItems="flex-start" spacing={2} className={classes.gridContainer}>
+				<Grid item xs={12}>
+					<Select type="select" label={<Trans>Input stream</Trans>} value={settings.push.name} onChange={onChange('push', 'name')}>
+						{options}
+					</Select>
+					<Button size="small" startIcon={<RefreshIcon />} onClick={onRefresh} sx={{ float: 'right' }}>
+						<Trans>Refresh</Trans>
+					</Button>
+				</Grid>
+				{settings.push.name === config.channelid && (
+					<React.Fragment>
+						<Grid item xs={12}>
+							<Typography>
+								<Trans>Address:</Trans>
+							</Typography>
+						</Grid>
+						<Grid item xs={12}>
+							<BoxTextarea>
+								<Textarea rows={1} value={RTMP} readOnly allowCopy />
+							</BoxTextarea>
+						</Grid>
+					</React.Fragment>
+				)}
+				<AdvancedSettings settings={settings} onChange={onChange} />
+				<ExtentionSettings settings={settings} skills={skills} onChange={onChange} />
+				<Grid item xs={12}>
+					<FormInlineButton onClick={onProbe} disabled={settings.push.name === 'none'}>
+						<Trans>Probe</Trans>
+					</FormInlineButton>
+				</Grid>
+			</Grid>
+		);
+	}
+
+	return form;
+}
+
+function PushSRT({
+	knownDevices = [],
+	settings = {},
+	config = {},
+	skills = {},
+	onChange = function (settings) {},
+	onProbe = function (settings, inputs) {},
+	onRefresh = function () {},
+}) {
+	const { i18n } = useLingui();
+	const classes = useStyles();
+	const navigate = useNavigate();
+
+	let form = null;
+
+	if (config.srt.enabled === false) {
+		form = (
+			<Grid container alignItems="flex-start" spacing={2} className={classes.gridContainer}>
+				<Grid item xs={12}>
+					<Typography>
+						<Trans>SRT server is not enabled</Trans>
+					</Typography>
+				</Grid>
+				<Grid item xs={12}>
+					<Button variant="outlined" size="large" fullWidth color="primary" onClick={() => navigate('/settings/srt')}>
+						<Trans>Enable SRT server ...</Trans>
+					</Button>
+				</Grid>
+			</Grid>
+		);
+	} else {
+		const SRT = getSRT(config);
+
+		const filteredDevices = knownDevices.filter((device) => device.media === 'srt');
+		const options = filteredDevices.map((device) => {
+			return (
+				<MenuItem key={device.id} value={device.id}>
+					{device.name}
+				</MenuItem>
+			);
+		});
+
+		options.unshift(
+			<MenuItem key="none" value="none" disabled>
+				{i18n._(t`Choose an input stream ...`)}
+			</MenuItem>,
+		);
+
+		options.push(
+			<MenuItem key={config.channelid} value={config.channelid}>
+				{i18n._(t`Send stream to address ...`)}
+			</MenuItem>,
+		);
+
+		form = (
+			<Grid container alignItems="flex-start" spacing={2} className={classes.gridContainer}>
+				<Grid item xs={12}>
+					<Select type="select" label={<Trans>Input stream</Trans>} value={settings.push.name} onChange={onChange('push', 'name')}>
+						{options}
+					</Select>
+					<Button size="small" startIcon={<RefreshIcon />} onClick={onRefresh} sx={{ float: 'right' }}>
+						<Trans>Refresh</Trans>
+					</Button>
+				</Grid>
+				{settings.push.name === config.channelid && (
+					<React.Fragment>
+						<Grid item xs={12}>
+							<Typography>
+								<Trans>Address:</Trans>
+							</Typography>
+						</Grid>
+						<Grid item xs={12}>
+							<BoxTextarea>
+								<Textarea rows={1} value={SRT} readOnly allowCopy />
+							</BoxTextarea>
+						</Grid>
+					</React.Fragment>
+				)}
+				<AdvancedSettings settings={settings} onChange={onChange} />
+				<ExtentionSettings settings={settings} skills={skills} onChange={onChange} />
+				<Grid item xs={12}>
+					<FormInlineButton onClick={onProbe} disabled={settings.push.name === 'none'}>
+						<Trans>Probe</Trans>
+					</FormInlineButton>
+				</Grid>
+			</Grid>
+		);
+	}
+
+	return form;
+}
+
+function Source({
+	knownDevices = [],
+	settings: externalSettings = {},
+	config = {},
+	skills = null,
+	onChange = function (settings) {},
+	onProbe = function (settings, inputs) {},
+	onRefresh = function () {},
+	onStore = function (name, data) {
+		return '';
+	},
+}) {
+	const classes = useStyles();
+	const { i18n } = useLingui();
+	config = initConfig(config);
+	skills = initSkills(skills);
+
+	const [$settings, setSettings] = React.useState(() => initSettings(externalSettings, config));
+	const settingsRef = React.useRef($settings);
+	const emittedSettingsRef = React.useRef(null);
+
+	React.useEffect(() => {
+		if (externalSettings === emittedSettingsRef.current) {
+			emittedSettingsRef.current = null;
+			return;
+		}
+
+		const nextSettings = initSettings(externalSettings, config);
+		settingsRef.current = nextSettings;
+		setSettings(nextSettings);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [externalSettings]);
+
+	const handleChange = (section, what) => (event) => {
+		const value = event.target.value;
+		const currentSettings = settingsRef.current;
+		let nextSettings = {
+			...currentSettings,
+		};
+
+		if (section === 'http') {
+			nextSettings.http = {
+				...currentSettings.http,
+				[what]: ['readNative', 'forceFramerate'].includes(what) ? !currentSettings.http[what] : value,
+			};
+		} else if (section === 'rtsp') {
+			nextSettings.rtsp = {
+				...currentSettings.rtsp,
+				[what]: ['udp'].includes(what) ? !currentSettings.rtsp[what] : value,
+			};
+		} else if (section === 'srt') {
+			nextSettings.srt = {
+				...currentSettings.srt,
+				[what]: value,
+			};
+		} else if (section === 'general') {
+			nextSettings.general = {
+				...currentSettings.general,
+				[what]: ['copyts', 'start_at_zero', 'use_wallclock_as_timestamps'].includes(what) ? !currentSettings.general[what] : value,
+			};
+		} else if (section === 'push') {
+			nextSettings.push = {
+				...currentSettings.push,
+				[what]: value,
+			};
+			if (what === 'type') {
+				nextSettings.push.name = config.channelid;
+			}
+		} else if (section === 'extentions') {
+			nextSettings.extentions = {
+				...currentSettings.extentions,
+				[what]: value,
+			};
+		} else {
+			nextSettings[what] = value;
+		}
+
+		settingsRef.current = nextSettings;
+		setSettings(nextSettings);
+		emittedSettingsRef.current = nextSettings;
+		onChange(nextSettings);
+	};
+
+	const handleProbe = () => {
+		const currentSettings = settingsRef.current;
+		onProbe(currentSettings, createInputs(currentSettings, config, skills));
+	};
+
+	const handleRefresh = () => {
+		onRefresh();
+	};
+
+	return (
+		<React.Fragment>
+			<Grid container alignItems="flex-start" spacing={2} className={classes.gridContainer}>
+				<Grid item xs={12}>
+					<Select type="select" label={<Trans>Pull or recieve the data:</Trans>} value={$settings.mode} onChange={handleChange('', 'mode')}>
+						<MenuItem value="pull">{i18n._(t`Pull Mode`)}</MenuItem>
+						<MenuItem value="push">{i18n._(t`Receive Mode`)}</MenuItem>
+					</Select>
+				</Grid>
+			</Grid>
+			{$settings.mode === 'pull' ? (
+				<Pull settings={$settings} config={config} skills={skills} onChange={handleChange} onProbe={handleProbe} />
+			) : (
+				<Push
+					settings={$settings}
+					config={config}
+					skills={skills}
+					knownDevices={knownDevices}
+					onChange={handleChange}
+					onProbe={handleProbe}
+					onRefresh={handleRefresh}
+				/>
+			)}
+		</React.Fragment>
+	);
+}
+
+function SourceIcon(props) {
+	return <Icon style={{ color: '#FFF' }} {...props} />;
+}
+
+const id = 'network';
+const name = <Trans>Network source</Trans>;
+const capabilities = ['audio', 'video'];
+const ffversion = '^4.1.0 || ^5.0.0 || ^6.1.0 || ^7.0.0 || ^8.1.0 || ^9.0.0';
+
+const func = {
+	initSettings,
+	initConfig,
+	initSkills,
+	createInputs,
+	getProtocolClass,
+	getHLS,
+	getRTMP,
+	getSRT,
+	isValidURL,
+	isAuthProtocol,
+	isSupportedProtocol,
+};
+
+export { id, name, capabilities, ffversion, SourceIcon as icon, Source as component, func };

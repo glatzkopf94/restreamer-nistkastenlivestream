@@ -1,0 +1,12 @@
+Restreamer Nistkasten Livestream
+Copyright 2026 Alexander / Nistkasten Livestream
+
+This product is an unofficial derivative work based on software from
+datarhei / FOSS GmbH, including Restreamer, Core and Restreamer UI.
+The original projects are licensed under the Apache License 2.0.
+
+This product includes FFmpeg built with GPL components. FFmpeg and the
+codec libraries retain their respective licenses.
+
+This project is not affiliated with or endorsed by datarhei or FOSS GmbH.
+See THIRD_PARTY_NOTICES.md for source references and licensing details.

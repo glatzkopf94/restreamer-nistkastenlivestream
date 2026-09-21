@@ -1,0 +1,7 @@
+.env
+backups
+dist
+.git
+.github
+*.zip
+*.tar.gz

@@ -1,0 +1,124 @@
+name: Build and publish NKL Restreamer
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: nkl-restreamer-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Quellcode auschecken
+        uses: actions/checkout@v7
+
+      - name: Releasewerte laden und pruefen
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          source release.env
+          expected_image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          if [[ "$GHCR_IMAGE" != "$expected_image" ]]; then
+            echo "GHCR_IMAGE muss $expected_image entsprechen." >&2
+            exit 1
+          fi
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "v$RELEASE_VERSION" ]]; then
+            echo "Der Releasetag muss v$RELEASE_VERSION heissen." >&2
+            exit 1
+          fi
+          echo "release_version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "product_version=$PRODUCT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "product_label=$PRODUCT_LABEL" >> "$GITHUB_OUTPUT"
+          echo "image=$GHCR_IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Statische Tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/test-livechasing-manager.py
+          python3 tests/test-player-ui.py
+          ./scripts/check-release.sh
+          sh -n install.sh build-local.sh status.sh uninstall.sh tests/smoke-test.sh scripts/package-release.sh scripts/check-release.sh
+
+      - name: Bei GitHub Container Registry anmelden
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | docker login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+      - name: FFmpeg bauen
+        run: docker build --pull --tag nkl/ffmpeg:9.0.1 ffmpeg
+
+      - name: Restreamer Core bauen und testen
+        run: docker build --pull --tag nkl/restreamer-core:${{ steps.release.outputs.release_version }} core
+
+      - name: Restreamer UI bauen und testen
+        run: docker build --pull --tag nkl/restreamer-ui:${{ steps.release.outputs.release_version }} ui
+
+      - name: Release-Image zusammensetzen
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build \
+            --file bundle/Dockerfile \
+            --build-arg FFMPEG_IMAGE=nkl/ffmpeg:9.0.1 \
+            --build-arg CORE_IMAGE=nkl/restreamer-core:${{ steps.release.outputs.release_version }} \
+            --build-arg RESTREAMER_UI_IMAGE=nkl/restreamer-ui:${{ steps.release.outputs.release_version }} \
+            --label org.opencontainers.image.source="https://github.com/${GITHUB_REPOSITORY}" \
+            --label org.opencontainers.image.revision="$GITHUB_SHA" \
+            --label org.opencontainers.image.version="${{ steps.release.outputs.release_version }}" \
+            --label org.opencontainers.image.title="${{ steps.release.outputs.product_label }}" \
+            --tag "${{ steps.release.outputs.image }}:${{ steps.release.outputs.release_version }}" \
+            .
+
+      - name: Image-Tags veroeffentlichen
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="${{ steps.release.outputs.image }}"
+          release_tag="${{ steps.release.outputs.release_version }}"
+          product_tag="${{ steps.release.outputs.product_version }}"
+          docker tag "$image:$release_tag" "$image:$product_tag"
+          docker push "$image:$release_tag"
+          docker push "$image:$product_tag"
+
+      - name: Schnellinstallationspaket erstellen
+        run: ./scripts/package-release.sh
+
+      - name: Workflow-Artefakt speichern
+        uses: actions/upload-artifact@v7
+        with:
+          name: restreamer-nistkastenlivestream-${{ steps.release.outputs.release_version }}
+          path: |
+            dist/restreamer-nistkastenlivestream-${{ steps.release.outputs.release_version }}.zip
+            dist/restreamer-nistkastenlivestream-${{ steps.release.outputs.release_version }}.zip.sha256
+          if-no-files-found: error
+
+      - name: GitHub-Release anlegen
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${{ steps.release.outputs.release_version }}"
+          archive="dist/restreamer-nistkastenlivestream-${version}.zip"
+          checksum="${archive}.sha256"
+          gh release create "$GITHUB_REF_NAME" \
+            "$archive" "$checksum" \
+            --verify-tag \
+            --title "${{ steps.release.outputs.product_label }} / $version" \
+            --notes "Fertiges AMD64-Image: ${{ steps.release.outputs.image }}:$version. Das ZIP enthaelt den schnellen Pull-Installer; auf dem Zielserver ist kein lokaler Build mehr erforderlich."
