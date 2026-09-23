@@ -1,0 +1,70 @@
+name: Smoke test published NKL release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/smoke-release.yml"
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Quellcode auschecken
+        uses: actions/checkout@v7
+
+      - name: Bei GitHub Container Registry anmelden
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | docker login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+      - name: Veroeffentlichtes Image starten und vollstaendig pruefen
+        shell: bash
+        run: |
+          set -euo pipefail
+          source release.env
+
+          export RESTREAMER_IMAGE="${GHCR_IMAGE}:${RELEASE_VERSION}"
+          export RESTREAMER_PROJECT_NAME="nkl-smoke-${GITHUB_RUN_ID}"
+          export RESTREAMER_CONTAINER_NAME="nkl-smoke-${GITHUB_RUN_ID}"
+          export RESTREAMER_CONFIG_VOLUME="nkl-smoke-config-${GITHUB_RUN_ID}"
+          export RESTREAMER_DATA_VOLUME="nkl-smoke-data-${GITHUB_RUN_ID}"
+          export RESTREAMER_HTTP_PORT=19080
+          export RESTREAMER_API_PORT=19181
+
+          cleanup() {
+            docker compose -f compose.yaml down --remove-orphans >/dev/null 2>&1 || true
+            docker volume rm "$RESTREAMER_CONFIG_VOLUME" "$RESTREAMER_DATA_VOLUME" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker volume create "$RESTREAMER_CONFIG_VOLUME" >/dev/null
+          docker volume create "$RESTREAMER_DATA_VOLUME" >/dev/null
+          docker compose -f compose.yaml pull restreamer-nkl
+          docker compose -f compose.yaml up --detach --remove-orphans
+
+          ready=false
+          for _ in $(seq 1 60); do
+            if curl --fail --silent "http://127.0.0.1:${RESTREAMER_HTTP_PORT}/" >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 2
+          done
+          if [[ "$ready" != true ]]; then
+            docker compose -f compose.yaml ps
+            docker logs --tail 160 "$RESTREAMER_CONTAINER_NAME"
+            exit 1
+          fi
+
+          ./tests/smoke-test.sh
