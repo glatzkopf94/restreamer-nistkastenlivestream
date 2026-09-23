@@ -116,9 +116,10 @@ test('DVR cleanup accepts the manager response after the file existence check', 
 	const result = await Restreamer.prototype._requestDVRPurge.call(context, [channelId]);
 
 	expect(result).toEqual({ ok: true, requestId, channelCount: 1, deletedFiles: 42 });
-	expect(dataHasFile).toHaveBeenCalledTimes(1);
-	expect(dataGetFile).toHaveBeenCalledTimes(1);
-	expect(dataDeleteFile).toHaveBeenCalledTimes(2);
+	expect(context._call).toHaveBeenCalledWith(dataHasFile, `/livechasing-control/responses/${requestId}.json`);
+	expect(context._call).toHaveBeenCalledWith(dataGetFile, `/livechasing-control/responses/${requestId}.json`);
+	expect(context._call).toHaveBeenCalledWith(dataDeleteFile, `/livechasing-control/requests/${requestId}.json`);
+	expect(context._call).toHaveBeenCalledWith(dataDeleteFile, `/livechasing-control/responses/${requestId}.json`);
 });
 
 test('DVR cleanup pauses an active channel and restarts it after deletion', async () => {
