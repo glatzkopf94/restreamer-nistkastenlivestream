@@ -67,4 +67,4 @@ jobs:
             exit 1
           fi
 
-          ./tests/smoke-test.sh
+          sh -x ./tests/smoke-test.sh
