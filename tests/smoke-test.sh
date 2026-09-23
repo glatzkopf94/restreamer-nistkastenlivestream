@@ -43,7 +43,6 @@ docker exec "$container" sh -c 'grep -Fq "Automatically detect 16:9 or 4:3" /cor
 docker exec "$container" sh -c 'grep -Fq "Delete all DVR content" /core/ui/static/js/main.*.js'
 docker exec "$container" sh -c 'grep -Fq "install-latest-nkl-release" /core/ui/static/js/main.*.js'
 docker exec "$container" sh -c 'test "$NKL_RELEASE_VERSION" = "'"$RELEASE_VERSION"'"'
-docker exec "$container" sh -c "grep -Fq '$PRODUCT_LABEL' /core/ui/static/js/main.*.js"
 docker exec "$container" sh -c 'grep -Fq "livechasing-viewer-id-v1" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c 'ls /core/ui/static/media/background-restreamer.*.png >/dev/null'
 

@@ -9,7 +9,7 @@ on:
       - ".github/workflows/smoke-release.yml"
 
 permissions:
-  contents: read
+  contents: write
   packages: read
 
 jobs:
@@ -67,4 +67,15 @@ jobs:
             exit 1
           fi
 
-          sh -x ./tests/smoke-test.sh
+          ./tests/smoke-test.sh
+
+      - name: Geprueftes Installationspaket aktualisieren
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          source release.env
+          ./scripts/package-release.sh
+          archive="dist/restreamer-nistkastenlivestream-${RELEASE_VERSION}.zip"
+          gh release upload "v${RELEASE_VERSION}" "$archive" "${archive}.sha256" --clobber
