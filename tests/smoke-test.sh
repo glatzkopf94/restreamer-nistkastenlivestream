@@ -127,25 +127,32 @@ docker exec "$container" ffmpeg \
     -f mpegts "$av_smoke"
 
 docker exec -i "$container" python3 - "$av_smoke" <<'PY'
-import json
+import re
 import subprocess
 import sys
 
 path = sys.argv[1]
 
-def packet_times(selector):
-    output = subprocess.check_output([
-        'ffprobe', '-v', 'error', '-select_streams', selector,
-        '-show_entries', 'packet=pts_time,duration_time', '-of', 'json', path,
-    ], text=True)
-    packets = json.loads(output)['packets']
-    times = [float(packet['pts_time']) for packet in packets if 'pts_time' in packet]
-    assert times and all(right > left for left, right in zip(times, times[1:])), selector
-    last = max(float(packet['pts_time']) + float(packet.get('duration_time', 0)) for packet in packets if 'pts_time' in packet)
-    return times[0], last, len(times)
+result = subprocess.run([
+    'ffmpeg', '-hide_banner', '-loglevel', 'info', '-debug_ts', '-i', path,
+    '-map', '0:v:0', '-map', '0:a:0', '-codec', 'copy', '-f', 'null', '-',
+], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+packet = re.compile(
+    r'demuxer\+ffmpeg -> .*?type:(video|audio) .*?pkt_pts_time:([-0-9.]+) '
+    r'.*?duration_time:([-0-9.]+)'
+)
+streams = {'video': [], 'audio': []}
+for kind, pts, duration in packet.findall(result.stderr):
+    streams[kind].append((float(pts), float(duration)))
 
-video_start, video_end, video_packets = packet_times('v:0')
-audio_start, audio_end, _ = packet_times('a:0')
+def packet_times(kind):
+    packets = streams[kind]
+    times = [pts for pts, _ in packets]
+    assert times and all(right > left for left, right in zip(times, times[1:])), kind
+    return times[0], max(pts + duration for pts, duration in packets), len(times)
+
+video_start, video_end, video_packets = packet_times('video')
+audio_start, audio_end, _ = packet_times('audio')
 assert abs(video_packets / 12.0 - 15.0) < 0.2
 assert min(video_end, audio_end) - max(video_start, audio_start) > 11.8
 assert abs(video_end - audio_end) < 0.15
