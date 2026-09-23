@@ -18,15 +18,15 @@ data = {
 		type: "network",
 		settings: {
 			mode: 'pull',
-			address: 'https://ch-fra-n4.livespotting.com:443/vpu/rm1naghi/85pwd6iv.m3u8',
+			address: 'https://example.invalid/live/example.m3u8',
 			udp: false,
 		},
 		inputs: [{
-			address: 'https://ch-fra-n4.livespotting.com:443/vpu/rm1naghi/85pwd6iv.m3u8',
+			address: 'https://example.invalid/live/example.m3u8',
 			options: ['-re'],
 		}],
 		streams: [{
-			"url": "https://ch-fra-n4.livespotting.com:443/vpu/rm1naghi/85pwd6iv.m3u8",
+			"url": "https://example.invalid/live/example.m3u8",
 			"format": "hls",
 			"index": 0,
 			"stream": 0,
@@ -42,7 +42,7 @@ data = {
 			"layout": "",
 			"channels": 0
 		},{
-			"url": "https://ch-fra-n4.livespotting.com:443/vpu/rm1naghi/85pwd6iv.m3u8",
+			"url": "https://example.invalid/live/example.m3u8",
 			"format": "hls",
 			"index": 0,
 			"stream": 1,
@@ -921,6 +921,16 @@ const initProfile = (initialProfile) => {
 		settings: {},
 		...profile.video.filter,
 	};
+
+	// dev12 stored both the individual SetPTS graph and the fully composed
+	// graph. Rewrite both on load so already configured channels cannot restart
+	// with the frame-counter clock after an update.
+	const timestampRepair = profile.video.filter.settings.setpts;
+	if (timestampRepair && timestampRepair.settings) {
+		const timestampFilter = Filters.Video.Get('setpts');
+		timestampRepair.graph = timestampFilter.createGraph(timestampRepair.settings);
+		profile.video.filter.graph = timestampFilter.migrateGraph(profile.video.filter.graph, timestampRepair.settings);
+	}
 
 	profile.audio = {
 		source: -1,

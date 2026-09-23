@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.3.0-dev13 – 2026-09-23
+
+- Langzeit-A/V-Drift der bisherigen Timestamp-Reparatur behoben. Der alte
+  Framezaehler `setpts=N/(fps*TB)` lief bei einer realen Kamerarate von etwa
+  14,9654 fps gegen die 48-kHz-Audiouhr auseinander. Die Reparatur verwendet
+  jetzt `fps=fps=<Wert>:start_time=0:round=near` und richtet die CFR-Ausgabe an
+  den realen Eingangszeitstempeln aus.
+- Der in der Oberflaeche gewaehlte FPS-Wert bleibt dynamisch; ungueltige Werte
+  werden weiterhin abgewiesen. Framerate-Normalisierung bleibt vor Skalierung,
+  Logos, dynamischem Text und H.264-Encoding angeordnet.
+- Gespeicherte dev12-Profile und bereits erzeugte Core-Prozessdefinitionen
+  werden atomar vor dem Core-Start migriert. Vor einer tatsaechlichen Aenderung
+  wird eine lokale, nur fuer root lesbare Kopie der Prozessdatenbank angelegt.
+  Kameraadressen und Zugangsdaten werden dabei nicht protokolliert.
+- Kein Audiofilter wird erzwungen. AAC-Copy und kontrollierte AAC-Neucodierung
+  behalten ihre bisherige Konfiguration; insbesondere wird kein fester Offset
+  gesetzt.
+- Beschleunigten Sechs-Stunden-Regressionslauf fuer 14,9654-fps-Video und
+  48-kHz-Audio sowie Migrationstests, monotone Zeitstempel-, CFR-, Puffer- und
+  DVR-Listengroessentests fuer zwei, drei und sechs Stunden ergaenzt.
+- DVR-Dauer, `diskfs`, Zwei-Sekunden-Segmente, Aufraeumlogik und die Obergrenze
+  von 168 Stunden bleiben unveraendert. Updates verwenden weiterhin dieselben
+  Konfigurations- und Datenvolumes und sichern die Konfiguration automatisch.
+- Produktkennung auf `NKL 1.3 Beta` angehoben.
+
 ## 0.3.0-dev12 – 2026-09-21
 
 - Produktkennung auf `NKL 1.2 Beta` angehoben.

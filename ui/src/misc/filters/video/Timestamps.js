@@ -6,9 +6,11 @@ import Grid from '@mui/material/Grid';
 import Checkbox from '../../Checkbox';
 import { control as Framerate } from './Framerate';
 
-// Rebuild presentation timestamps for sources that deliver non-monotonic or
-// otherwise broken timestamps. This is intentionally separate from the
-// interpolation filter: no intermediate frames are generated.
+// Normalize a source to a stable CFR without replacing its real clock with a
+// frame counter. The fps filter keeps the input PTS as the reference and only
+// duplicates or drops frames at the requested output instants.
+
+const legacyGraphPattern = /setpts=N\/\(([0-9]+(?:\.[0-9]+)?)\*TB\)/g;
 
 function init(initialState) {
 	return {
@@ -26,7 +28,22 @@ function createGraph(settings) {
 		return '';
 	}
 
-	return `setpts=N/(${fps}*TB)`;
+	return `fps=fps=${fps}:start_time=0:round=near`;
+}
+
+function migrateGraph(graph, settings) {
+	if (typeof graph !== 'string' || !legacyGraphPattern.test(graph)) {
+		legacyGraphPattern.lastIndex = 0;
+		return graph;
+	}
+
+	legacyGraphPattern.lastIndex = 0;
+	const replacement = createGraph(settings);
+	if (replacement.length === 0) {
+		return graph;
+	}
+
+	return graph.replace(legacyGraphPattern, replacement);
 }
 
 function Filter({ settings = {}, onChange = function (settings, graph) {} }) {
@@ -57,7 +74,7 @@ function Filter({ settings = {}, onChange = function (settings, graph) {} }) {
 		<React.Fragment>
 			<Grid item xs={12}>
 				<Checkbox
-					label={<Trans>Repair broken video timestamps (SetPTS)</Trans>}
+					label={<Trans>Repair video timestamps (time-based CFR)</Trans>}
 					checked={settings.enabled}
 					onChange={update('enabled')}
 				/>
@@ -65,8 +82,8 @@ function Filter({ settings = {}, onChange = function (settings, graph) {} }) {
 			{settings.enabled && (
 				<Grid item xs={12}>
 					<Framerate
-						label={<Trans>Source framerate for timestamp repair</Trans>}
-						customLabel={<Trans>Custom source framerate</Trans>}
+						label={<Trans>Output framerate for timestamp repair</Trans>}
+						customLabel={<Trans>Custom output framerate</Trans>}
 						value={settings.fps}
 						onChange={update('fps')}
 					/>
@@ -90,4 +107,4 @@ function defaults() {
 	return { settings, graph: createGraph(settings) };
 }
 
-export { name, filter, type, hwaccel, summarize, defaults, createGraph, Filter as component };
+export { name, filter, type, hwaccel, summarize, defaults, createGraph, migrateGraph, Filter as component };

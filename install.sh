@@ -31,6 +31,7 @@ docker compose version >/dev/null
 if [ ! -f .env ]; then
     migrated_env=""
     for candidate in \
+        ../restreamer-nistkastenlivestream-0.3.0-dev12/.env \
         ../restreamer-nistkastenlivestream-0.3.0-dev11/.env \
         ../restreamer-nistkastenlivestream-0.3.0-dev10/.env \
         ../restreamer-livechasing-0.3.0-dev10/.env \
@@ -48,6 +49,42 @@ if [ ! -f .env ]; then
     fi
 fi
 chmod 0600 .env
+
+env_backup=".env.before-${release_version}"
+cp -a .env "$env_backup"
+chmod 0600 "$env_backup"
+install_committed=false
+container_change_started=false
+legacy_container=false
+legacy_config_volume=""
+legacy_data_volume=""
+legacy_container_was_running=false
+
+rollback_install() {
+    status="$?"
+    trap - EXIT HUP INT TERM
+
+    if [ "$status" -ne 0 ] && [ "$install_committed" = false ]; then
+        cp -a "$env_backup" .env
+        chmod 0600 .env
+
+        if [ "$container_change_started" = true ]; then
+            echo "Installation fehlgeschlagen; bisherige .env und Containerfassung werden wiederhergestellt." >&2
+            docker compose -f compose.yaml down >/dev/null 2>&1 || true
+            if [ "$legacy_container_was_running" = true ]; then
+                docker start restreamer-livechasing >/dev/null 2>&1 || true
+            else
+                docker compose -f compose.yaml up --detach --remove-orphans >/dev/null 2>&1 || true
+            fi
+        fi
+    fi
+
+    if [ "$status" -eq 0 ]; then
+        rm -f "$env_backup"
+    fi
+    exit "$status"
+}
+trap rollback_install EXIT HUP INT TERM
 
 replace_env_default() {
     key="$1"
@@ -68,18 +105,19 @@ replace_env_default() {
     return 0
 }
 
-legacy_container=false
-legacy_config_volume=""
-legacy_data_volume=""
 replace_env_default RESTREAMER_PROJECT_NAME restreamer-livechasing restreamer-nkl || true
 if replace_env_default RESTREAMER_CONTAINER_NAME restreamer-livechasing restreamer-nkl; then
     legacy_container=true
 fi
 if replace_env_default RESTREAMER_CONFIG_VOLUME restreamer-livechasing-config restreamer-nkl-config; then
     legacy_config_volume=restreamer-livechasing-config
+elif replace_env_default RESTREAMER_CONFIG_VOLUME restreamer-dev-config restreamer-nkl-config; then
+    legacy_config_volume=restreamer-dev-config
 fi
 if replace_env_default RESTREAMER_DATA_VOLUME restreamer-livechasing-data restreamer-nkl-data; then
     legacy_data_volume=restreamer-livechasing-data
+elif replace_env_default RESTREAMER_DATA_VOLUME restreamer-dev-data restreamer-nkl-data; then
+    legacy_data_volume=restreamer-dev-data
 fi
 
 # Bekannte lokale Entwicklungsimages automatisch auf das fertige GHCR-Image
@@ -221,20 +259,7 @@ else
 fi
 
 echo "[3/4] Container aktualisieren und starten"
-legacy_container_was_running=false
-migration_committed=false
-
-rollback_legacy_container() {
-    status="$?"
-    trap - EXIT HUP INT TERM
-    if [ "$status" -ne 0 ] && [ "$legacy_container_was_running" = true ] && [ "$migration_committed" = false ]; then
-        echo "Migration fehlgeschlagen; der bisherige Container wird wieder gestartet." >&2
-        docker compose -f compose.yaml down >/dev/null 2>&1 || true
-        docker start restreamer-livechasing >/dev/null 2>&1 || true
-    fi
-    exit "$status"
-}
-trap rollback_legacy_container EXIT HUP INT TERM
+container_change_started=true
 
 if [ "$legacy_container" = true ] && docker container inspect restreamer-livechasing >/dev/null 2>&1; then
     if [ "$(docker inspect restreamer-livechasing --format '{{ .State.Running }}')" = true ]; then
@@ -293,7 +318,6 @@ done
 
 echo "[4/4] Release pruefen"
 ./tests/smoke-test.sh
-migration_committed=true
 
 install_update_agent
 
@@ -304,6 +328,7 @@ fi
 
 container_id="$(docker compose -f compose.yaml ps -q restreamer-nkl)"
 image_id="$(docker inspect "$container_id" --format '{{.Image}}')"
+install_committed=true
 
 echo
 echo "Restreamer Nistkasten Livestream ${release_version} laeuft auf http://127.0.0.1:${http_port}"

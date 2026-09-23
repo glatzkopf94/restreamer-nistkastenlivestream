@@ -24,7 +24,7 @@ func TestDevelopmentVersionsUseNumericOrder(t *testing.T) {
 	if semver.Compare(normalizeVersion("0.3.0-dev10"), normalizeVersion("0.3.0-dev9")) != 1 {
 		t.Fatal("dev10 must be newer than dev9")
 	}
-	if semver.Compare(normalizeVersion("0.3.0-dev12"), normalizeVersion("0.3.0-dev11")) != 1 {
-		t.Fatal("dev12 must be newer than dev11")
+	if semver.Compare(normalizeVersion("0.3.0-dev13"), normalizeVersion("0.3.0-dev12")) != 1 {
+		t.Fatal("dev13 must be newer than dev12")
 	}
 }

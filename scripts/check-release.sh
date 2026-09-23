@@ -38,6 +38,11 @@ grep -Fq "NKL_RELEASE_VERSION=${RELEASE_VERSION}" bundle/Dockerfile || \
 grep -Fq 'api.github.com/repos/glatzkopf94/restreamer-nistkastenlivestream/releases/latest' ui/src/version.js || \
     fail "UI prueft nicht das NKL-GitHub-Repository"
 test -x scripts/nkl-update-agent.sh || fail "Host-Update-Agent ist nicht ausfuehrbar"
+test -x scripts/migrate-timestamp-repair.py || fail "Timestamp-Migration ist nicht ausfuehrbar"
+grep -Fq 'fps=fps=${fps}:start_time=0:round=near' ui/src/misc/filters/video/Timestamps.js || \
+    fail "zeitbasierte CFR-Reparatur fehlt"
+grep -Fq 'migrate-timestamp-repair.py' bundle/run.sh || \
+    fail "Startmigration fuer dev12-Profile fehlt"
 grep -Fq 'RESTREAMER_CONTAINER_NAME=restreamer-nkl' .env.example || \
     fail "Standard-Containername ist nicht restreamer-nkl"
 grep -Fq 'RESTREAMER_CONFIG_VOLUME=restreamer-nkl-config' .env.example || \

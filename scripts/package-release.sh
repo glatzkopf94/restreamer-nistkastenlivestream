@@ -33,6 +33,9 @@ for file in \
     status.sh \
     uninstall.sh \
     RELEASE_INSTALL.md \
+    CHANGELOG.md \
+    RELEASE_NOTES.md \
+    TESTING.md \
     LICENSE \
     NOTICE \
     THIRD_PARTY_NOTICES.md; do

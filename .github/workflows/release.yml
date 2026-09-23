@@ -49,8 +49,10 @@ jobs:
           set -euo pipefail
           python3 tests/test-livechasing-manager.py
           python3 tests/test-player-ui.py
+          python3 tests/test-timestamp-repair.py
+          python3 -m py_compile scripts/migrate-timestamp-repair.py
           ./scripts/check-release.sh
-          sh -n install.sh build-local.sh status.sh uninstall.sh tests/smoke-test.sh scripts/package-release.sh scripts/check-release.sh scripts/nkl-update-agent.sh
+          sh -n install.sh build-local.sh status.sh uninstall.sh bundle/run.sh tests/smoke-test.sh scripts/package-release.sh scripts/check-release.sh scripts/nkl-update-agent.sh
 
       - name: Bei GitHub Container Registry anmelden
         shell: bash
@@ -121,4 +123,4 @@ jobs:
             "$archive" "$checksum" \
             --verify-tag \
             --title "${{ steps.release.outputs.product_label }} / $version" \
-            --notes "Fertiges AMD64-Image: ${{ steps.release.outputs.image }}:$version. Das ZIP enthaelt den schnellen Pull-Installer; auf dem Zielserver ist kein lokaler Build mehr erforderlich."
+            --notes-file RELEASE_NOTES.md

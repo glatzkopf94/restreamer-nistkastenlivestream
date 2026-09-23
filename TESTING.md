@@ -1,4 +1,4 @@
-# Teststatus 0.3.0-dev12
+# Teststatus 0.3.0-dev13
 
 ## Erfolgreich ausgefuehrt
 
@@ -8,8 +8,9 @@
   datensparsamer Rueckfall nach anonymisierter Clientkennung
 - Go-Regressionstests fuer die sichere Weitergabe gueltiger Zuschauer-IDs in
   HLS-Playlists und das Verwerfen ungueltiger IDs
-- 77 gezielte UI-Tests fuer Netzwerk-Zugangsdaten, Overlay-Assistent,
-  Encoder, SetPTS, Text-/Logo-Overlay, DVR-HLS-Logik und die
+- 82 gezielte UI-Tests fuer Netzwerk-Zugangsdaten, Overlay-Assistent,
+  Encoder, zeitbasierte CFR-Reparatur, dev12-Profilmigration,
+  Text-/Logo-Overlay, DVR-HLS-Logik und die
   RTSP-Prozessprofile, die 16:9-/4:3-Erkennung sowie kanalbezogene und globale
   DVR-Bereinigung mit automatischem Stream-Neustart
 - zwei zusaetzliche isolierte Netzwerk-Tests fuer die erzeugten Optionen der
@@ -18,6 +19,10 @@
   Restreamer-Metadaten, sofortige Vorlagenaktualisierung sowie Burn-in- und
   Player-Overlay-Dateien. Die DVR-Loeschtests stellen zusaetzlich sicher, dass
   nur die HLS-Dateien des angeforderten Kanals entfernt werden
+- zwei Python-Regressionstests fuer die atomare Migration gespeicherter
+  dev12-Prozessgraphen sowie eine beschleunigte Sechs-Stunden-Simulation mit
+  14,9654-fps-Video und 48-kHz-Audio. Geprueft werden CFR, monotone
+  Zeitstempel, A/V-Pufferueberlappung und das Ausbleiben langfristiger Drift.
 - Shell-Syntaxpruefung fuer Installer, Status, Deinstallation, Startskripte
   und Container-Smoke-Test sowie Paketierung des Schnellinstallers
 - Der GitHub-Releasebuild fuehrt sechs deterministische UI-Suites seriell und
@@ -42,7 +47,8 @@ Die GitHub-Aktion baut und testet das fertige Image vor der Veroeffentlichung.
 Der Container-Smoke-Test wird zusaetzlich nach `./install.sh` auf dem
 Zielserver automatisch ausgefuehrt. Er
 prueft innerhalb des fertig gebauten Images RTSP, die datarhei-JSON-Ausgabe von
-FFmpeg, SetPTS, Drawtext, Logo-Overlay, libx264 und den laufenden
+FFmpeg, zeitbasierte CFR-Normalisierung, monotone MPEG-TS-Zeitstempel,
+A/V-Ueberlappung, Drawtext, Logo-Overlay, libx264 und den laufenden
 Overlay-/DVR-Manager. Ausserdem wird geprueft, dass dynamische Text-, HTML- und
 Player-Konfigurationsdateien vom Core-Disk-Cache ausgenommen sind. Ab dev9
 kontrolliert er zusaetzlich beide Overlay-Assistenten, die fuenfsekündige

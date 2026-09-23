@@ -17,7 +17,7 @@ Das Quellpaket lokal entpacken und im entpackten Verzeichnis ausfuehren:
 git init
 git branch -M main
 git add .
-git commit -m "NKL 1.2 Beta / 0.3.0-dev12"
+git commit -m "NKL 1.3 Beta / 0.3.0-dev13"
 git remote add origin https://github.com/glatzkopf94/restreamer-nistkastenlivestream.git
 git push -u origin main
 ```
@@ -41,8 +41,8 @@ erforderlich.
 ## 3. Erstes Release starten
 
 ```bash
-git tag v0.3.0-dev12
-git push origin v0.3.0-dev12
+git tag v0.3.0-dev13
+git push origin v0.3.0-dev13
 ```
 
 Unter `Actions -> Build and publish NKL Restreamer` laesst sich der Build
@@ -59,7 +59,7 @@ Nach dem ersten erfolgreichen Build auf der GitHub-Profilseite das neue Paket
 Erst danach kann ein Server das Image ohne GitHub-Anmeldung laden:
 
 ```text
-ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev12
+ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev13
 ```
 
 ## 5. Schnellinstallation testen
@@ -67,8 +67,8 @@ ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev12
 Das ZIP aus dem GitHub-Release auf den Debian-Server laden und ausfuehren:
 
 ```bash
-unzip -o restreamer-nistkastenlivestream-0.3.0-dev12.zip
-cd restreamer-nistkastenlivestream-0.3.0-dev12
+unzip -o restreamer-nistkastenlivestream-0.3.0-dev13.zip
+cd restreamer-nistkastenlivestream-0.3.0-dev13
 chmod 0755 install.sh status.sh uninstall.sh tests/smoke-test.sh
 ./install.sh
 ```

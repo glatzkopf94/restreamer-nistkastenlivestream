@@ -140,7 +140,7 @@ class PlayerUITest(unittest.TestCase):
         global_theme = (ROOT / "ui/src/theme/global.js").read_text(encoding="utf-8")
         background = ROOT / "ui/src/assets/images/background-restreamer.png"
 
-        self.assertIn('"nklVersion": "1.2 Beta"', package)
+        self.assertIn('"nklVersion": "1.3 Beta"', package)
         self.assertIn("`NKL ${pkg.nklVersion || Version}`", version)
         self.assertIn("background-restreamer.png", global_theme)
         self.assertTrue(background.is_file())

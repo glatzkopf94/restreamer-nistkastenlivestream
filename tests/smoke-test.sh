@@ -12,13 +12,14 @@ if [ -z "$container" ]; then
     exit 1
 fi
 
-docker exec "$container" ffmpeg -hide_banner -filters 2>/dev/null | grep -Eq '[[:space:]]setpts[[:space:]]'
+docker exec "$container" ffmpeg -hide_banner -filters 2>/dev/null | grep -Eq '[[:space:]]fps[[:space:]]'
 docker exec "$container" ffmpeg -hide_banner -filters 2>/dev/null | grep -Eq '[[:space:]]drawtext[[:space:]]'
 docker exec "$container" ffmpeg -hide_banner -filters 2>/dev/null | grep -Eq '[[:space:]]overlay[[:space:]]'
 docker exec "$container" ffmpeg -hide_banner -filters 2>/dev/null | grep -Eq '[[:space:]]movie[[:space:]]'
 docker exec "$container" python3 --version >/dev/null
 docker exec "$container" python3 -c 'import json, urllib.request' >/dev/null
 docker exec "$container" test -x /core/bin/livechasing-manager.py
+docker exec "$container" test -x /core/bin/migrate-timestamp-repair.py
 docker exec "$container" sh -c "ps auxww | grep '[l]ivechasing-manager.py'" >/dev/null
 docker exec "$container" sh -c 'grep -Fq "def purge_dvr_content" /core/bin/livechasing-manager.py'
 docker exec "$container" test -d /core/data/livechasing-control/requests
@@ -106,7 +107,7 @@ docker exec "$container" ffmpeg \
     -hide_banner -loglevel error \
     -f lavfi -i 'testsrc2=size=1280x720:rate=15' \
     -t 2 \
-    -filter_complex "[0:v]setpts=N/(15*TB)[base];movie=filename='$smoke_logo',format=rgba,colorchannelmixer=aa=0.80[logo];[base][logo]overlay=x=W-w-24:y=24[tmp];[tmp]drawtext=textfile='$smoke_textfile':reload=15:expansion=none:fontfile='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf':fontcolor=0x32AAFF:fontsize=36:x=24:y=h-th-24[out]" \
+    -filter_complex "[0:v]fps=fps=15:start_time=0:round=near[base];movie=filename='$smoke_logo',format=rgba,colorchannelmixer=aa=0.80[logo];[base][logo]overlay=x=W-w-24:y=24[tmp];[tmp]drawtext=textfile='$smoke_textfile':reload=15:expansion=none:fontfile='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf':fontcolor=0x32AAFF:fontsize=36:x=24:y=h-th-24[out]" \
     -map '[out]' \
     -codec:v libx264 -preset ultrafast \
     -f null -
@@ -114,4 +115,42 @@ docker exec "$container" ffmpeg \
 cleanup
 trap - EXIT HUP INT TERM
 
-echo "Smoke-Test erfolgreich: adaptive Player-Geometrie, Bandbreitenschutz, RTSP-Profile, schnelle Player-Overlays, DVR-Schutz, SetPTS, Drawtext, Logo-Overlay, Manager und libx264 funktionieren."
+av_smoke='/tmp/nkl-cfr-av-smoke.ts'
+docker exec "$container" rm -f "$av_smoke"
+docker exec "$container" ffmpeg \
+    -hide_banner -loglevel error \
+    -f lavfi -i 'testsrc2=size=160x90:rate=149654/10000' \
+    -f lavfi -i 'sine=frequency=1000:sample_rate=48000' \
+    -t 12 \
+    -filter:v 'fps=fps=15:start_time=0:round=near' \
+    -codec:v libx264 -preset ultrafast -g 30 -keyint_min 30 -sc_threshold 0 \
+    -codec:a aac -b:a 64k \
+    -f mpegts "$av_smoke"
+
+docker exec -i "$container" python3 - "$av_smoke" <<'PY'
+import json
+import subprocess
+import sys
+
+path = sys.argv[1]
+
+def packet_times(selector):
+    output = subprocess.check_output([
+        'ffprobe', '-v', 'error', '-select_streams', selector,
+        '-show_entries', 'packet=pts_time,duration_time', '-of', 'json', path,
+    ], text=True)
+    packets = json.loads(output)['packets']
+    times = [float(packet['pts_time']) for packet in packets if 'pts_time' in packet]
+    assert times and all(right > left for left, right in zip(times, times[1:])), selector
+    last = max(float(packet['pts_time']) + float(packet.get('duration_time', 0)) for packet in packets if 'pts_time' in packet)
+    return times[0], last, len(times)
+
+video_start, video_end, video_packets = packet_times('v:0')
+audio_start, audio_end, _ = packet_times('a:0')
+assert abs(video_packets / 12.0 - 15.0) < 0.2
+assert min(video_end, audio_end) - max(video_start, audio_start) > 11.8
+assert abs(video_end - audio_end) < 0.15
+PY
+docker exec "$container" rm -f "$av_smoke"
+
+echo "Smoke-Test erfolgreich: adaptive Player-Geometrie, Bandbreitenschutz, RTSP-Profile, schnelle Player-Overlays, DVR-Schutz, zeitbasierte CFR-Reparatur, A/V-Ueberlappung, Drawtext, Logo-Overlay, Manager und libx264 funktionieren."

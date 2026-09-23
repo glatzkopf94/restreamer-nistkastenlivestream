@@ -6,3 +6,5 @@ ui/node_modules/
 *.log
 *.zip
 *.sha256
+__pycache__/
+*.pyc

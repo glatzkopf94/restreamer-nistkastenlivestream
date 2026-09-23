@@ -10,6 +10,10 @@ if [ -x /core/bin/ffmigrate ]; then
     /core/bin/ffmigrate || exit 1
 fi
 
+if [ -x /core/bin/migrate-timestamp-repair.py ]; then
+    /core/bin/migrate-timestamp-repair.py || exit 1
+fi
+
 if [ ! -f "${CORE_STORAGE_DISK_DIR}/index.html" ]; then
     cp /core/ui-root/index.html /core/ui-root/index_icon.svg "${CORE_STORAGE_DISK_DIR}"
 fi

@@ -1,4 +1,4 @@
-# Restreamer Nistkasten Livestream 0.3.0-dev12
+# Restreamer Nistkasten Livestream 0.3.0-dev13
 
 Inoffizieller Fork des datarhei Restreamers fuer Nistkasten-Livestreams,
 hochaufgeloeste HEVC-/H.265-Kameras, aktuelle FFmpeg-Komponenten, frei
@@ -14,7 +14,8 @@ Quellrepository und Container-Image:
 
 - FFmpeg 9.0.1 mit portierten datarhei-Status- und HLS-Patches
 - RTSP ueber TCP, drei Stabilitaetsprofile sowie HEVC-zu-H.264-Transcoding
-- SetPTS-Filter zur Rekonstruktion fehlerhafter Video-Zeitstempel
+- zeitbasierte CFR-Reparatur fuer fehlerhafte Video-Zeitstempel ohne
+  langfristige A/V-Uhrdrift
 - streambezogener Overlay-Editor direkt im Webinterface
 - statischer Text und beliebig viele benannte HTTP(S)-JSON-Quellen
 - Zahlenformatierung, vier Schriftarten, Farben, Position und Texthintergrund
@@ -26,7 +27,7 @@ Quellrepository und Container-Image:
 - automatische 16:9-/4:3-Player-Geometrie ohne Formatwechsel beim Start
 - optional nur ein aktiver Player pro Browser sowie erneute Play-Bestaetigung
   nach 15 Minuten zur Begrenzung ausgehender HLS-Bandbreite
-- eigene NKL-Oberflaeche mit Weltraumhintergrund und Kennung `NKL 1.2 Beta`
+- eigene NKL-Oberflaeche mit Weltraumhintergrund und Kennung `NKL 1.3 Beta`
 - alle zwei Sekunden aktualisierte, kanalübergreifend deduplizierte
   Zuschauerzahl direkt neben CPU- und RAM-Auslastung
 - vorgebautes AMD64-Image mit schneller Pull-Installation ueber GHCR
@@ -50,8 +51,8 @@ lokaler Build bleibt mit `./build-local.sh` moeglich.
 ## Installation
 
 ```bash
-unzip -o restreamer-nistkastenlivestream-0.3.0-dev12.zip
-cd restreamer-nistkastenlivestream-0.3.0-dev12
+unzip -o restreamer-nistkastenlivestream-0.3.0-dev13.zip
+cd restreamer-nistkastenlivestream-0.3.0-dev13
 chmod 0755 install.sh status.sh uninstall.sh tests/smoke-test.sh
 ./install.sh
 ```
@@ -289,7 +290,8 @@ aktivierten Kanaele.
 4. Ausgabebildrate identisch zur Kamera, beispielsweise 15 fps
 5. konstante Framerate (CFR)
 6. Keyframe-Intervall 1 oder 2 Sekunden
-7. Filter `Defekte Video-Zeitstempel reparieren (SetPTS)` mit Quellbildrate
+7. Filter `Video-Zeitstempel reparieren (zeitbasierte CFR)` mit der gewuenschten
+   Ausgabebildrate, beispielsweise 15 fps
 8. keinen zusaetzlichen H.264-Vorschaustream aktivieren, wenn die Hauptausgabe
    bereits H.264 ist
 
@@ -330,8 +332,10 @@ docker compose -f compose.yaml ps
 docker logs --since 10m restreamer-nkl
 ```
 
-Der Smoke-Test prueft RTSP, die datarhei-JSON-Ausgabe von FFmpeg, SetPTS,
-Drawtext, Logo-Overlay, libx264 und den laufenden Overlay-/DVR-Manager. Er
+Der Smoke-Test prueft RTSP, die datarhei-JSON-Ausgabe von FFmpeg, die
+zeitbasierte CFR-Reparatur mit 48-kHz-Audio, monotone Paketzeitstempel,
+A/V-Ueberlappung, Drawtext, Logo-Overlay, libx264 und den laufenden
+Overlay-/DVR-Manager. Er
 kontrolliert ausserdem die beiden Assistenten, die RTSP-Profile, den
 Cache-Bypass, die fuenfsekündige Player-Aktualisierung und den
 DVR-Sicherheitsrand sowie adaptive Player-Geometrie, Ein-Player-Koordination
@@ -352,11 +356,11 @@ mit der technischen Version startet Build, Tests, GHCR-Push und die Erstellung
 des kleinen Installations-ZIPs:
 
 ```bash
-git tag v0.3.0-dev12
-git push origin v0.3.0-dev12
+git tag v0.3.0-dev13
+git push origin v0.3.0-dev13
 ```
 
-Das Image erhaelt die Tags `0.3.0-dev12` und `1.2-beta`. Nach dem ersten Lauf
+Das Image erhaelt die Tags `0.3.0-dev13` und `1.3-beta`. Nach dem ersten Lauf
 muss das Paket auf GitHub unter `Packages -> Package settings -> Change
 visibility` einmalig auf `Public` gestellt werden, damit der Installer ohne
 GitHub-Anmeldung darauf zugreifen kann.
@@ -406,7 +410,7 @@ Details zu Fremdkomponenten und Lizenzen stehen in
 
 ## Status
 
-Version 0.3.0-dev12 / NKL 1.2 Beta ist eine Entwicklungsvorschau. Der
+Version 0.3.0-dev13 / NKL 1.3 Beta ist eine Entwicklungsvorschau. Der
 offizielle Produktivcontainer bleibt unberuehrt. Vor einem breiten
 Produktiveinsatz werden ein mehrtaegiger Dauertest, Browserpruefungen und ein
 Wiederherstellungstest der Konfigurationssicherung empfohlen.

@@ -1,10 +1,41 @@
 import * as TextOverlay from './TextOverlay';
 import * as Timestamps from './Timestamps';
+import { initProfile } from '../../../utils/metadata';
 
-test('timestamp repair creates deterministic PTS at the selected rate', () => {
-	expect(Timestamps.createGraph({ enabled: true, fps: '15' })).toBe('setpts=N/(15*TB)');
+test('timestamp repair creates time-based CFR at the selected rate', () => {
+	expect(Timestamps.createGraph({ enabled: true, fps: '15' })).toBe('fps=fps=15:start_time=0:round=near');
+	expect(Timestamps.createGraph({ enabled: true, fps: '14.985' })).toBe('fps=fps=14.985:start_time=0:round=near');
 	expect(Timestamps.createGraph({ enabled: true, fps: '0' })).toBe('');
+	expect(Timestamps.createGraph({ enabled: true, fps: '241' })).toBe('');
+	expect(Timestamps.createGraph({ enabled: true, fps: '15;movie=/tmp/unsafe' })).toBe('');
 	expect(Timestamps.createGraph({ enabled: false, fps: '15' })).toBe('');
+});
+
+test('dev12 timestamp graphs are migrated without changing surrounding filters', () => {
+	const legacy = '[in]setpts=N/(15*TB)[lc_base0];[lc_base0]scale=1280:720[out]';
+	const migrated = Timestamps.migrateGraph(legacy, { enabled: true, fps: '25' });
+
+	expect(migrated).toBe('[in]fps=fps=25:start_time=0:round=near[lc_base0];[lc_base0]scale=1280:720[out]');
+	expect(migrated).not.toContain('setpts=N/');
+});
+
+test('loading a dev12 profile rebuilds stored timestamp repair graphs', () => {
+	const profile = initProfile({
+		video: {
+			filter: {
+				graph: 'setpts=N/(15*TB),scale=3840:2160',
+				settings: {
+					setpts: {
+						graph: 'setpts=N/(15*TB)',
+						settings: { enabled: true, fps: '15' },
+					},
+				},
+			},
+		},
+	});
+
+	expect(profile.video.filter.settings.setpts.graph).toBe('fps=fps=15:start_time=0:round=near');
+	expect(profile.video.filter.graph).toBe('fps=fps=15:start_time=0:round=near,scale=3840:2160');
 });
 
 test('text overlay only permits persistent plain text files', () => {
@@ -72,10 +103,10 @@ test('logo overlay is composed with ordinary filters and dynamic text', () => {
 				opacity: '0.8',
 			},
 		},
-		['setpts=N/(15*TB)'],
+		['fps=fps=15:start_time=0:round=near'],
 	);
 
-	expect(graph).toContain('[in]setpts=N/(15*TB)[lc_base0]');
+	expect(graph).toContain('[in]fps=fps=15:start_time=0:round=near[lc_base0]');
 	expect(graph).toContain("movie=filename='/core/data/channels/channel-1/overlaylogo1.png'");
 	expect(graph).toContain('overlay=x=W-w-24:y=24');
 	expect(graph).toContain("drawtext=textfile='/core/data/overlays/channel-1.txt'");
