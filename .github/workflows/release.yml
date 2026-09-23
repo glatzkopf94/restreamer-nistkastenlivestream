@@ -3,8 +3,12 @@ name: Build and publish NKL Restreamer
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - "v*"
+    paths:
+      - "release.env"
 
 permissions:
   contents: write
@@ -109,18 +113,42 @@ jobs:
             dist/restreamer-nistkastenlivestream-${{ steps.release.outputs.release_version }}.zip.sha256
           if-no-files-found: error
 
-      - name: GitHub-Release anlegen
-        if: github.ref_type == 'tag'
+      - name: Release-Tag und GitHub-Release anlegen
+        if: github.ref_type == 'tag' || github.ref_name == 'main'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           version="${{ steps.release.outputs.release_version }}"
+          tag="v${version}"
           archive="dist/restreamer-nistkastenlivestream-${version}.zip"
           checksum="${archive}.sha256"
-          gh release create "$GITHUB_REF_NAME" \
-            "$archive" "$checksum" \
-            --verify-tag \
-            --title "${{ steps.release.outputs.product_label }} / $version" \
-            --notes-file RELEASE_NOTES.md
+
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            tag="$GITHUB_REF_NAME"
+          else
+            existing_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" --jq '.object.sha' 2>/dev/null || true)"
+            if [[ -n "$existing_sha" && "$existing_sha" != "$GITHUB_SHA" ]]; then
+              echo "Der Tag ${tag} verweist bereits auf ${existing_sha}, erwartet wurde ${GITHUB_SHA}." >&2
+              exit 1
+            fi
+            if [[ -z "$existing_sha" ]]; then
+              gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+                -f ref="refs/tags/${tag}" \
+                -f sha="$GITHUB_SHA" >/dev/null
+            fi
+          fi
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$archive" "$checksum" --clobber
+            gh release edit "$tag" \
+              --title "${{ steps.release.outputs.product_label }} / $version" \
+              --notes-file RELEASE_NOTES.md
+          else
+            gh release create "$tag" \
+              "$archive" "$checksum" \
+              --verify-tag \
+              --title "${{ steps.release.outputs.product_label }} / $version" \
+              --notes-file RELEASE_NOTES.md
+          fi
