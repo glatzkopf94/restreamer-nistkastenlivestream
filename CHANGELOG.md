@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.3.0-dev14 – 2026-09-23
+
+- Host-Update-Agent gegen kompakte GitHub-Release-Antworten gehaertet. Die
+  Versionskennung `tag_name` wird nun unabhaengig von Zeilenumbruechen erkannt;
+  dadurch entsteht beim Installieren eines bereits korrekt erkannten Updates
+  kein irrefuehrender Fehler `invalid-release-version` mehr.
+- HTTP-`HEAD`-Antworten werden im UI-API-Client nicht mehr als
+  JSON-Body geparst. Der Core liefert fuer vorhandene `.json`-Dateien einen
+  JSON-MIME-Typ, bei `HEAD` aber definitionsgemaess keinen Body. Das bisherige
+  `JSON.parse("")` bei der anfaenglichen 404-Abfrage oder der spaeteren
+  Erfolgsantwort liess die manuelle DVR-Bereinigung trotz bereits erfolgter
+  Loeschung als Fehler erscheinen.
+- Regressionstests fuer kompaktes und formatiertes GitHub-Release-JSON, leere
+  erfolgreiche `HEAD`-Antworten sowie die DVR-Antwortuebergabe ergaenzt.
+- DVR-Aufbewahrung, `dvr.hours`, `listSize`, `diskfs`, Segmentdauer,
+  Aufraeumlogik sowie bestehende Konfigurations- und DVR-Volumes bleiben
+  unveraendert.
+
 ## 0.3.0-dev13 – 2026-09-23
 
 - Langzeit-A/V-Drift der bisherigen Timestamp-Reparatur behoben. Der alte

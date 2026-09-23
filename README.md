@@ -1,4 +1,4 @@
-# Restreamer Nistkasten Livestream 0.3.0-dev13
+# Restreamer Nistkasten Livestream 0.3.0-dev14
 
 Inoffizieller Fork des datarhei Restreamers fuer Nistkasten-Livestreams,
 hochaufgeloeste HEVC-/H.265-Kameras, aktuelle FFmpeg-Komponenten, frei
@@ -51,8 +51,8 @@ lokaler Build bleibt mit `./build-local.sh` moeglich.
 ## Installation
 
 ```bash
-unzip -o restreamer-nistkastenlivestream-0.3.0-dev13.zip
-cd restreamer-nistkastenlivestream-0.3.0-dev13
+unzip -o restreamer-nistkastenlivestream-0.3.0-dev14.zip
+cd restreamer-nistkastenlivestream-0.3.0-dev14
 chmod 0755 install.sh status.sh uninstall.sh tests/smoke-test.sh
 ./install.sh
 ```
@@ -356,11 +356,11 @@ mit der technischen Version startet Build, Tests, GHCR-Push und die Erstellung
 des kleinen Installations-ZIPs:
 
 ```bash
-git tag v0.3.0-dev13
-git push origin v0.3.0-dev13
+git tag v0.3.0-dev14
+git push origin v0.3.0-dev14
 ```
 
-Das Image erhaelt die Tags `0.3.0-dev13` und `1.3-beta`. Nach dem ersten Lauf
+Das Image erhaelt die Tags `0.3.0-dev14` und `1.3-beta`. Nach dem ersten Lauf
 muss das Paket auf GitHub unter `Packages -> Package settings -> Change
 visibility` einmalig auf `Public` gestellt werden, damit der Installer ohne
 GitHub-Anmeldung darauf zugreifen kann.
@@ -410,7 +410,7 @@ Details zu Fremdkomponenten und Lizenzen stehen in
 
 ## Status
 
-Version 0.3.0-dev13 / NKL 1.3 Beta ist eine Entwicklungsvorschau. Der
+Version 0.3.0-dev14 / NKL 1.3 Beta ist eine Entwicklungsvorschau. Der
 offizielle Produktivcontainer bleibt unberuehrt. Vor einem breiten
 Produktiveinsatz werden ein mehrtaegiger Dauertest, Browserpruefungen und ein
 Wiederherstellungstest der Konfigurationssicherung empfohlen.

@@ -1,4 +1,9 @@
 import Restreamer, { countUniqueHLSViewers, getHLSSegmentCleanupAge, getIngestRTSPStability, getPlayerAspectRatio, isDVRChannelId } from './restreamer';
+import { v4 as uuidv4 } from 'uuid';
+
+jest.mock('uuid', () => ({
+	v4: jest.fn(),
+}));
 
 test('DVR segment cleanup uses only the playlist count and no nominal age', () => {
 	expect(getHLSSegmentCleanupAge({ hls: { dvr: { enabled: true }, listSize: 7200, segmentDuration: 2 } })).toBe(0);
@@ -89,6 +94,31 @@ test('DVR cleanup accepts only canonical channel IDs', () => {
 	expect(isDVRChannelId('8672be5b-5a35-4a56-a970-877d7d728983')).toBe(true);
 	expect(isDVRChannelId('../channels')).toBe(false);
 	expect(isDVRChannelId('8672be5b-5a35-4a56-a970-877d7d728983/extra')).toBe(false);
+});
+
+test('DVR cleanup accepts the manager response after the file existence check', async () => {
+	const channelId = '8672be5b-5a35-4a56-a970-877d7d728983';
+	const requestId = '00000000-0000-4000-8000-000000000001';
+	const dataHasFile = jest.fn();
+	const dataGetFile = jest.fn();
+	const dataPutFile = jest.fn();
+	const dataDeleteFile = jest.fn();
+	const context = {
+		api: { DataHasFile: dataHasFile, DataGetFile: dataGetFile, DataPutFile: dataPutFile, DataDeleteFile: dataDeleteFile },
+		_call: jest.fn(async (fn) => {
+			if (fn === dataPutFile || fn === dataHasFile || fn === dataDeleteFile) return [null, null];
+			if (fn === dataGetFile) return [{ ok: true, requestId, channelCount: 1, deletedFiles: 42 }, null];
+			throw new Error('unexpected API call');
+		}),
+	};
+
+	uuidv4.mockReturnValueOnce(requestId);
+	const result = await Restreamer.prototype._requestDVRPurge.call(context, [channelId]);
+
+	expect(result).toEqual({ ok: true, requestId, channelCount: 1, deletedFiles: 42 });
+	expect(dataHasFile).toHaveBeenCalledTimes(1);
+	expect(dataGetFile).toHaveBeenCalledTimes(1);
+	expect(dataDeleteFile).toHaveBeenCalledTimes(2);
 });
 
 test('DVR cleanup pauses an active channel and restarts it after deletion', async () => {

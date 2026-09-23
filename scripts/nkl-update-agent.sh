@@ -103,7 +103,10 @@ curl --fail --silent --show-error --location \
     --header 'User-Agent: NKL-Restreamer-Update-Agent' \
     "$release_api" > "$release_json"
 
-latest_version="$(sed -n 's/^[[:space:]]*"tag_name":[[:space:]]*"v\([^"]*\)".*/\1/p' "$release_json" | head -n 1)"
+# GitHub usually pretty-prints API responses, but proxies are allowed to
+# compact the JSON onto one line. Match tag_name wherever it occurs on the
+# line instead of requiring it to be the first JSON member on that line.
+latest_version="$(sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\([^"]*\)".*/\1/p' "$release_json" | head -n 1)"
 case "$latest_version" in
     ''|*[!0-9A-Za-z._-]*)
         failure_code="invalid-release-version"

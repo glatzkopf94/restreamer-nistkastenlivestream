@@ -43,6 +43,10 @@ grep -Fq 'fps=fps=${fps}:start_time=0:round=near' ui/src/misc/filters/video/Time
     fail "zeitbasierte CFR-Reparatur fehlt"
 grep -Fq 'migrate-timestamp-repair.py' bundle/run.sh || \
     fail "Startmigration fuer dev12-Profile fehlt"
+grep -Fq 's/.*"tag_name"[[:space:]]*:' scripts/nkl-update-agent.sh || \
+    fail "Update-Agent verarbeitet keine kompakte Release-JSON"
+grep -Fq "options.method === 'HEAD'" ui/src/utils/api.js || \
+    fail "UI behandelt bodylose HEAD-Antworten nicht"
 grep -Fq 'RESTREAMER_CONTAINER_NAME=restreamer-nkl' .env.example || \
     fail "Standard-Containername ist nicht restreamer-nkl"
 grep -Fq 'RESTREAMER_CONFIG_VOLUME=restreamer-nkl-config' .env.example || \

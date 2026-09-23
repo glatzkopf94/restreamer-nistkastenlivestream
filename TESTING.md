@@ -1,4 +1,4 @@
-# Teststatus 0.3.0-dev13
+# Teststatus 0.3.0-dev14
 
 ## Erfolgreich ausgefuehrt
 
@@ -8,11 +8,13 @@
   datensparsamer Rueckfall nach anonymisierter Clientkennung
 - Go-Regressionstests fuer die sichere Weitergabe gueltiger Zuschauer-IDs in
   HLS-Playlists und das Verwerfen ungueltiger IDs
-- 82 gezielte UI-Tests fuer Netzwerk-Zugangsdaten, Overlay-Assistent,
+- 85 gezielte UI-Tests fuer Netzwerk-Zugangsdaten, Overlay-Assistent,
   Encoder, zeitbasierte CFR-Reparatur, dev12-Profilmigration,
   Text-/Logo-Overlay, DVR-HLS-Logik und die
   RTSP-Prozessprofile, die 16:9-/4:3-Erkennung sowie kanalbezogene und globale
-  DVR-Bereinigung mit automatischem Stream-Neustart
+  DVR-Bereinigung mit automatischem Stream-Neustart. Darin enthalten sind
+  Regressionstests fuer erfolgreiche bodylose `HEAD`-Antworten und die
+  korrekte DVR-Antwortuebergabe
 - zwei zusaetzliche isolierte Netzwerk-Tests fuer die erzeugten Optionen der
   Profile `Stabil` und `Streng`
 - neun Python-Tests fuer JSON-Quellen, Vorlagenformatierung,
@@ -23,6 +25,8 @@
   dev12-Prozessgraphen sowie eine beschleunigte Sechs-Stunden-Simulation mit
   14,9654-fps-Video und 48-kHz-Audio. Geprueft werden CFR, monotone
   Zeitstempel, A/V-Pufferueberlappung und das Ausbleiben langfristiger Drift.
+- drei Python-Regressionstests fuer die Release-Versionsauswertung des
+  Update-Agenten mit formatierter und kompakter GitHub-JSON
 - Shell-Syntaxpruefung fuer Installer, Status, Deinstallation, Startskripte
   und Container-Smoke-Test sowie Paketierung des Schnellinstallers
 - Der GitHub-Releasebuild fuehrt sechs deterministische UI-Suites seriell und

@@ -1,4 +1,4 @@
-# Vorhandene Entwicklungsinstanz auf 0.3.0-dev13 umstellen
+# Vorhandene Entwicklungsinstanz auf 0.3.0-dev14 umstellen
 
 Diese Anleitung uebernimmt die Volumes `restreamer-dev-config` und
 `restreamer-dev-data`. Der offizielle Container `restreamer` sowie dessen
@@ -11,7 +11,7 @@ docker run --rm \
   -v restreamer-dev-config:/source:ro \
   -v /root:/backup \
   alpine:3.24 \
-  tar -C /source -czf /backup/restreamer-dev-config-before-0.3.0-dev13.tar.gz .
+  tar -C /source -czf /backup/restreamer-dev-config-before-0.3.0-dev14.tar.gz .
 ```
 
 ```bash
@@ -19,7 +19,7 @@ docker run --rm \
   -v restreamer-dev-data:/source:ro \
   -v /root:/backup \
   alpine:3.24 \
-  tar -C /source -czf /backup/restreamer-dev-data-before-0.3.0-dev13.tar.gz .
+  tar -C /source -czf /backup/restreamer-dev-data-before-0.3.0-dev14.tar.gz .
 ```
 
 ## 2. Alten Entwicklungscontainer stoppen
@@ -37,7 +37,7 @@ uebernehmen die bestehenden Volumes und verwenden weiterhin Port 9080/9181:
 ```dotenv
 RESTREAMER_PROJECT_NAME=restreamer-nkl
 RESTREAMER_CONTAINER_NAME=restreamer-nkl
-RESTREAMER_IMAGE=ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev13
+RESTREAMER_IMAGE=ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev14
 RESTREAMER_BIND_ADDRESS=127.0.0.1
 RESTREAMER_HTTP_PORT=9080
 RESTREAMER_API_PORT=9181
@@ -51,7 +51,7 @@ kopieren.
 ## 4. Installieren
 
 ```bash
-cd /root/restreamer-nistkastenlivestream-0.3.0-dev13
+cd /root/restreamer-nistkastenlivestream-0.3.0-dev14
 chmod 0755 install.sh status.sh uninstall.sh tests/smoke-test.sh
 ./install.sh
 ```

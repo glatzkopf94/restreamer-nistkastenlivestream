@@ -18,6 +18,7 @@ RUN cd /ui && \
 		src/misc/coders/coders.test.js \
 		src/misc/controls/HLS.test.js \
 		src/misc/filters/video/CustomFilters.test.js \
+		src/utils/api.test.js \
 		src/utils/restreamer-livechasing.test.js \
 		src/views/Edit/Wizard/Sources/NetworkInput.test.js \
 		src/views/Publication/PlayerOverlay.test.js && \

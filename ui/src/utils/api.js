@@ -129,7 +129,12 @@ class API {
 				message: response.statusText,
 			};
 
-			if (isJSON === true) {
+			// HEAD never carries a response body, even if the server advertises
+			// the resource or error representation as application/json.
+			if (options.method === 'HEAD') {
+				this._error(res.err.message);
+				return res;
+			} else if (isJSON === true) {
 				const body = await response.json();
 
 				if ('code' in body && 'message' in body) {
@@ -146,6 +151,14 @@ class API {
 
 			this._error(res.err.message);
 
+			return res;
+		}
+
+		// A HEAD response never has a message body. Some Core filesystem
+		// endpoints still advertise the file's Content-Type (for example
+		// application/json), so trying to parse that empty body as JSON would
+		// turn a successful existence check into an exception.
+		if (options.method === 'HEAD') {
 			return res;
 		}
 

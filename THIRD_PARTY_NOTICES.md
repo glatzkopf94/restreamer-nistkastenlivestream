@@ -1,6 +1,6 @@
 # Hinweise zu Fremdkomponenten
 
-Restreamer Nistkasten Livestream 0.3.0-dev13 ist ein inoffizieller Fork und
+Restreamer Nistkasten Livestream 0.3.0-dev14 ist ein inoffizieller Fork und
 steht nicht in Verbindung mit datarhei oder FOSS GmbH. Namen und Marken ihrer
 jeweiligen Inhaber werden nur zur Beschreibung der technischen Herkunft
 verwendet.
