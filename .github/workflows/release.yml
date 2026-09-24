@@ -19,9 +19,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
-    runs-on: ubuntu-24.04
+  build:
+    name: Build and smoke test ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
 
     steps:
       - name: Quellcode auschecken
@@ -43,8 +52,6 @@ jobs:
             exit 1
           fi
           echo "release_version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "product_version=$PRODUCT_VERSION" >> "$GITHUB_OUTPUT"
-          echo "product_label=$PRODUCT_LABEL" >> "$GITHUB_OUTPUT"
           echo "image=$GHCR_IMAGE" >> "$GITHUB_OUTPUT"
 
       - name: Statische Tests
@@ -55,7 +62,8 @@ jobs:
           python3 tests/test-player-ui.py
           python3 tests/test-timestamp-repair.py
           python3 tests/test-update-agent.py
-          python3 -m py_compile scripts/migrate-timestamp-repair.py
+          python3 tests/test-release-architecture.py
+          python3 -m py_compile scripts/migrate-timestamp-repair.py scripts/verify-multiarch-manifest.py
           ./scripts/check-release.sh
           sh -n install.sh build-local.sh status.sh uninstall.sh bundle/run.sh tests/smoke-test.sh scripts/package-release.sh scripts/check-release.sh scripts/nkl-update-agent.sh
 
@@ -66,19 +74,20 @@ jobs:
         run: |
           echo "$GHCR_TOKEN" | docker login ghcr.io --username "${{ github.actor }}" --password-stdin
 
-      - name: FFmpeg bauen
+      - name: FFmpeg nativ bauen
         run: docker build --pull --tag nkl/ffmpeg:9.0.1 ffmpeg
 
-      - name: Restreamer Core bauen und testen
+      - name: Restreamer Core nativ bauen und testen
         run: docker build --pull --tag nkl/restreamer-core:${{ steps.release.outputs.release_version }} core
 
-      - name: Restreamer UI bauen und testen
+      - name: Restreamer UI nativ bauen und testen
         run: docker build --pull --tag nkl/restreamer-ui:${{ steps.release.outputs.release_version }} ui
 
-      - name: Release-Image zusammensetzen
+      - name: Architekturgebundenes Image zusammensetzen
         shell: bash
         run: |
           set -euo pipefail
+          image="${{ steps.release.outputs.image }}:${{ steps.release.outputs.release_version }}-${{ matrix.arch }}"
           docker build \
             --file bundle/Dockerfile \
             --build-arg FFMPEG_IMAGE=nkl/ffmpeg:9.0.1 \
@@ -87,20 +96,70 @@ jobs:
             --label org.opencontainers.image.source="https://github.com/${GITHUB_REPOSITORY}" \
             --label org.opencontainers.image.revision="$GITHUB_SHA" \
             --label org.opencontainers.image.version="${{ steps.release.outputs.release_version }}" \
-            --label org.opencontainers.image.title="${{ steps.release.outputs.product_label }}" \
-            --tag "${{ steps.release.outputs.image }}:${{ steps.release.outputs.release_version }}" \
-            .
+            --tag "$image" .
+          test "$(docker image inspect "$image" --format '{{.Os}}/{{.Architecture}}')" = "linux/${{ matrix.arch }}"
+          docker push "$image"
 
-      - name: Image-Tags veroeffentlichen
+      - name: Fertiges Image in isolierten Volumes pruefen
         shell: bash
         run: |
           set -euo pipefail
-          image="${{ steps.release.outputs.image }}"
-          release_tag="${{ steps.release.outputs.release_version }}"
-          product_tag="${{ steps.release.outputs.product_version }}"
-          docker tag "$image:$release_tag" "$image:$product_tag"
-          docker push "$image:$release_tag"
-          docker push "$image:$product_tag"
+          arch="${{ matrix.arch }}"
+          config_volume="nkl-release-smoke-${arch}-config"
+          data_volume="nkl-release-smoke-${arch}-data"
+          cleanup() {
+            docker compose -f compose.yaml down --remove-orphans >/dev/null 2>&1 || true
+            docker volume rm "$config_volume" "$data_volume" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          docker volume create "$config_volume" >/dev/null
+          docker volume create "$data_volume" >/dev/null
+          cp .env.example .env
+          sed -i "s|^RESTREAMER_IMAGE=.*|RESTREAMER_IMAGE=${{ steps.release.outputs.image }}:${{ steps.release.outputs.release_version }}-${arch}|" .env
+          sed -i "s|^RESTREAMER_CONFIG_VOLUME=.*|RESTREAMER_CONFIG_VOLUME=${config_volume}|" .env
+          sed -i "s|^RESTREAMER_DATA_VOLUME=.*|RESTREAMER_DATA_VOLUME=${data_volume}|" .env
+          docker compose -f compose.yaml up --detach
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:9080/ >/dev/null; then
+              break
+            fi
+            if [[ "$attempt" == 60 ]]; then
+              docker compose -f compose.yaml ps
+              docker logs --tail 120 restreamer-nkl
+              exit 1
+            fi
+            sleep 2
+          done
+          ./tests/smoke-test.sh
+
+  publish:
+    name: Publish multiarch image and release
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Quellcode auschecken
+        uses: actions/checkout@v7
+
+      - name: Bei GitHub Container Registry anmelden
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | docker login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+      - name: AMD64 und ARM64 zu einem Image zusammenfuehren
+        shell: bash
+        run: |
+          set -euo pipefail
+          source release.env
+          docker buildx imagetools create \
+            --tag "$GHCR_IMAGE:$RELEASE_VERSION" \
+            --tag "$GHCR_IMAGE:$PRODUCT_VERSION" \
+            "$GHCR_IMAGE:$RELEASE_VERSION-amd64" \
+            "$GHCR_IMAGE:$RELEASE_VERSION-arm64"
+          docker buildx imagetools inspect --raw "$GHCR_IMAGE:$RELEASE_VERSION" > /tmp/nkl-manifest.json
+          python3 scripts/verify-multiarch-manifest.py /tmp/nkl-manifest.json
 
       - name: Schnellinstallationspaket erstellen
         run: ./scripts/package-release.sh
@@ -108,10 +167,10 @@ jobs:
       - name: Workflow-Artefakt speichern
         uses: actions/upload-artifact@v7
         with:
-          name: restreamer-nistkastenlivestream-${{ steps.release.outputs.release_version }}
+          name: restreamer-nistkastenlivestream-${{ github.sha }}
           path: |
-            dist/restreamer-nistkastenlivestream-${{ steps.release.outputs.release_version }}.zip
-            dist/restreamer-nistkastenlivestream-${{ steps.release.outputs.release_version }}.zip.sha256
+            dist/restreamer-nistkastenlivestream-*.zip
+            dist/restreamer-nistkastenlivestream-*.zip.sha256
           if-no-files-found: error
 
       - name: Release-Tag und GitHub-Release anlegen
@@ -121,7 +180,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          version="${{ steps.release.outputs.release_version }}"
+          source release.env
+          version="$RELEASE_VERSION"
           tag="v${version}"
           archive="dist/restreamer-nistkastenlivestream-${version}.zip"
           checksum="${archive}.sha256"
@@ -148,12 +208,12 @@ jobs:
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "$archive" "$checksum" --clobber
             gh release edit "$tag" \
-              --title "${{ steps.release.outputs.product_label }} / $version" \
+              --title "$PRODUCT_LABEL / $version" \
               --notes-file RELEASE_NOTES.md
           else
             gh release create "$tag" \
               "$archive" "$checksum" \
               --verify-tag \
-              --title "${{ steps.release.outputs.product_label }} / $version" \
+              --title "$PRODUCT_LABEL / $version" \
               --notes-file RELEASE_NOTES.md
           fi

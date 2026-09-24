@@ -1,4 +1,4 @@
-# Restreamer Nistkasten Livestream 0.3.0-dev14
+# Restreamer Nistkasten Livestream 0.3.0-dev15
 
 Inoffizieller Fork des datarhei Restreamers fuer Nistkasten-Livestreams,
 hochaufgeloeste HEVC-/H.265-Kameras, aktuelle FFmpeg-Komponenten, frei
@@ -30,7 +30,7 @@ Quellrepository und Container-Image:
 - eigene NKL-Oberflaeche mit Weltraumhintergrund und Kennung `NKL 1.3 Beta`
 - alle zwei Sekunden aktualisierte, kanalübergreifend deduplizierte
   Zuschauerzahl direkt neben CPU- und RAM-Auslastung
-- vorgebautes AMD64-Image mit schneller Pull-Installation ueber GHCR
+- vorgebautes Multiarch-Image fuer AMD64 und ARM64 mit schneller Pull-Installation ueber GHCR
 - Updatepruefung ausschliesslich ueber das eigene NKL-GitHub-Repository
 - bestaetigungspflichtige, SHA-256-gepruefte Updates direkt aus den
   Systemeinstellungen, ohne Docker-Socket im Restreamer-Container
@@ -38,7 +38,7 @@ Quellrepository und Container-Image:
 
 ## Voraussetzungen
 
-- Linux auf x86_64/AMD64
+- Linux auf x86_64/AMD64 oder aarch64/ARM64 (Raspberry Pi 5 mit 64-Bit-OS)
 - Docker Engine mit Docker Compose v2
 - ausreichend freier Speicher fuer Docker-Image, Konfiguration und DVR
 - ausreichend Datenspeicher fuer aktivierte DVR-Streams
@@ -51,8 +51,8 @@ lokaler Build bleibt mit `./build-local.sh` moeglich.
 ## Installation
 
 ```bash
-unzip -o restreamer-nistkastenlivestream-0.3.0-dev14.zip
-cd restreamer-nistkastenlivestream-0.3.0-dev14
+unzip -o restreamer-nistkastenlivestream-0.3.0-dev15.zip
+cd restreamer-nistkastenlivestream-0.3.0-dev15
 chmod 0755 install.sh status.sh uninstall.sh tests/smoke-test.sh
 ./install.sh
 ```
@@ -60,8 +60,8 @@ chmod 0755 install.sh status.sh uninstall.sh tests/smoke-test.sh
 Bei der ersten Installation wird `.env.example` automatisch als `.env`
 uebernommen. Bei einem Update bleibt eine vorhandene `.env` erhalten; bekannte
 lokale dev-Images werden automatisch auf das aktuelle GHCR-Image umgestellt.
-Eine `.env` aus einem direkt benachbarten dev11-, dev10- oder dev9-Verzeichnis wird
-automatisch uebernommen.
+Eine `.env` aus einem direkt benachbarten dev14-, dev13-, dev12-, dev11-,
+dev10- oder dev9-Verzeichnis wird automatisch uebernommen.
 
 Standardmaessig entstehen das Compose-Projekt und der Container
 `restreamer-nkl` mit den Volumes `restreamer-nkl-config` und
@@ -91,6 +91,15 @@ der UI gespeichert oder angezeigt.
 
 Die Standardwerte kollidieren nicht mit einem offiziellen Container
 `restreamer`. Der Installer lehnt dessen reservierten Namen und Volumes ab.
+
+Auf einem Raspberry Pi 5 mit 64-Bit-Betriebssystem wird automatisch die
+ARM64-Variante desselben Image-Tags geladen. Ein vorhandener Originalcontainer
+wie `restreamer-rpi` mit dem Image `datarhei/restreamer:rpi-latest` bleibt
+unveraendert. NKL verwendet einen eigenen Container, eigene Volumes und
+standardmaessig die nur lokal gebundenen Ports 9080/9181. Bei `armv7l`
+laeuft ein 32-Bit-System; der Installer bricht dann mit einer klaren Meldung
+ab. Die 4K-H.265-zu-H.264-Leistung auf einem Raspberry Pi 5 muss mit der
+jeweiligen Kamera und Bitrate separat praktisch geprueft werden.
 
 ## Overlay im Stream einrichten
 
@@ -356,11 +365,12 @@ mit der technischen Version startet Build, Tests, GHCR-Push und die Erstellung
 des kleinen Installations-ZIPs:
 
 ```bash
-git tag v0.3.0-dev14
-git push origin v0.3.0-dev14
+git tag v0.3.0-dev15
+git push origin v0.3.0-dev15
 ```
 
-Das Image erhaelt die Tags `0.3.0-dev14` und `1.3-beta`. Nach dem ersten Lauf
+Das Multiarch-Image erhaelt die Tags `0.3.0-dev15` und `1.3-beta`. Beide
+enthalten `linux/amd64` und `linux/arm64`. Nach dem ersten Lauf
 muss das Paket auf GitHub unter `Packages -> Package settings -> Change
 visibility` einmalig auf `Public` gestellt werden, damit der Installer ohne
 GitHub-Anmeldung darauf zugreifen kann.
@@ -410,7 +420,7 @@ Details zu Fremdkomponenten und Lizenzen stehen in
 
 ## Status
 
-Version 0.3.0-dev14 / NKL 1.3 Beta ist eine Entwicklungsvorschau. Der
+Version 0.3.0-dev15 / NKL 1.3 Beta ist eine Entwicklungsvorschau. Der
 offizielle Produktivcontainer bleibt unberuehrt. Vor einem breiten
 Produktiveinsatz werden ein mehrtaegiger Dauertest, Browserpruefungen und ein
 Wiederherstellungstest der Konfigurationssicherung empfohlen.

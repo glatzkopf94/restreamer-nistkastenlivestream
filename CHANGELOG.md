@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0-dev15 – 2026-09-24
+
+- Vorgebautes ARM64-Image fuer Raspberry Pi 5 mit 64-Bit-System ergaenzt.
+  AMD64 und ARM64 werden auf nativen GitHub-Runnern getrennt gebaut und in
+  isolierten Containern geprueft. Das gemeinsame GHCR-Tag wird erst nach
+  erfolgreichem Smoke-Test beider Architekturen angelegt.
+- Installer fuer x86_64 und aarch64 freigegeben; 32-Bit-ARM wird mit klarer
+  Fehlermeldung abgewiesen. Auch ein als `restreamer-rpi` benannter offizieller
+  datarhei-Container wird vor einer Verwechslung geschuetzt.
+- Automatische Uebernahme der `.env` aus benachbarten dev14- und
+  dev13-Verzeichnissen ergaenzt. NKL-Konfigurations- und DVR-Volumes bleiben
+  beim Update bestehen.
+- Fehlende Sprachkatalog-Eintraege der neuen Zeitstempel-Filterbeschriftungen
+  mit deutschen und englischen Fallbacks korrigiert.
+
 ## 0.3.0-dev14 – 2026-09-23
 
 - Host-Update-Agent gegen kompakte GitHub-Release-Antworten gehaertet. Die

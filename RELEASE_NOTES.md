@@ -1,25 +1,24 @@
-# NKL 1.3 Beta / 0.3.0-dev14
+# NKL 1.3 Beta / 0.3.0-dev15
 
-Dieses Wartungsrelease behebt zwei Fehler aus dev13:
+Dieses Release stellt das fertige Image erstmals gemeinsam fuer
+`linux/amd64` und `linux/arm64` bereit. FFmpeg 9.0.1, Core und UI werden auf
+nativen GitHub-Runnern getrennt gebaut und getestet; erst nach zwei
+erfolgreichen Container-Smoke-Tests wird das gemeinsame Manifest publiziert.
+Docker waehlt auf einem Raspberry Pi 5 mit 64-Bit-System automatisch ARM64.
 
-- Der Host-Update-Agent erkennt die Versionskennung nun auch in kompakter,
-  einzeiliger GitHub-Release-JSON. Damit scheitert die Installation eines in
-  der Oberflaeche erkannten Updates nicht mehr mit
-  `invalid-release-version`.
-- Der UI-API-Client versucht bei erfolgreichen HTTP-`HEAD`-Antworten nicht
-  mehr, einen nicht vorhandenen JSON-Body zu parsen. Die manuelle
-  DVR-Bereinigung meldet dadurch nach einer erfolgreichen Loeschung auch
-  Erfolg statt eines Fehlers.
+Das Installations-ZIP mit `install.sh` gilt fuer beide Architekturen. Der
+Installer erkennt `aarch64`, lehnt 32-Bit-ARM ab und schuetzt auch einen
+anders benannten offiziellen datarhei-Container wie `restreamer-rpi`.
+NKL nutzt unveraendert eigene Volumes und standardmaessig 127.0.0.1:9080/9181.
+Bestehende NKL-Konfigurationen aus dev14 und dev13 werden bei einem Update
+automatisch gefunden; vorhandene DVR-Daten bleiben erhalten.
 
-Die zeitbasierte CFR-Reparatur aus dev13 bleibt unveraendert aktiv. Ebenso
-bleiben DVR-Historie und Einstellungen erhalten: `diskfs`, Zwei-Sekunden-
-Segmente, frei konfigurierbare 1 bis 168 Stunden, `dvr.hours`, `listSize`,
-Aufraeumlogik sowie die bestehenden Konfigurations- und Datenvolumes werden
-nicht geaendert.
+Die kryptischen IDs der drei Zeitstempel-Filterbeschriftungen werden im
+Produktivbuild durch lesbare deutsche beziehungsweise englische Texte ersetzt.
+An der zeitbasierten CFR-Reparatur selbst wird nichts geaendert. Die dev14-
+Korrekturen fuer Self-Update und die DVR-Erfolgsmeldung bleiben enthalten.
 
-Das fertige AMD64-Image lautet:
+Image: `ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev15`
 
-`ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev14`
-
-Das beigefuegte ZIP enthaelt den Pull-Installer; auf dem Zielserver ist kein
-lokaler Build erforderlich.
+Auf dem Raspberry Pi 5 muss die praktische Transcoding-Leistung fuer den
+jeweiligen 4K-Kamerastream gesondert geprueft werden.

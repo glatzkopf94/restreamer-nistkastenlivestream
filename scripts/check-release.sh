@@ -57,5 +57,11 @@ grep -Fq 'restreamer-livechasing-config restreamer-nkl-config' install.sh || \
     fail "Migration des bisherigen Konfigurationsvolumes fehlt"
 grep -Fq 'restreamer-livechasing-data restreamer-nkl-data' install.sh || \
     fail "Migration des bisherigen Datenvolumes fehlt"
+grep -Fq 'ubuntu-24.04-arm' .github/workflows/release.yml || \
+    fail "nativer ARM64-Build fehlt"
+grep -Fq 'verify-multiarch-manifest.py' .github/workflows/release.yml || \
+    fail "Pruefung des Multiarch-Manifests fehlt"
+grep -Fq 'aarch64|arm64' install.sh || \
+    fail "ARM64-Installerfreigabe fehlt"
 
 echo "Release-Pruefung erfolgreich: ${PRODUCT_LABEL} / ${RELEASE_VERSION}"

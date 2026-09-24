@@ -14,10 +14,17 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-if [ "$(uname -m)" != "x86_64" ]; then
-    echo "Dieses Release ist fuer x86_64/AMD64 gebaut; erkannt: $(uname -m)" >&2
-    exit 1
-fi
+case "$(uname -m)" in
+    x86_64|aarch64|arm64) ;;
+    armv7l|armv6l)
+        echo "Dieses Image benoetigt ein 64-Bit-Betriebssystem (ARM64 oder AMD64)." >&2
+        exit 1
+        ;;
+    *)
+        echo "Nicht unterstuetzte Architektur: $(uname -m) (erlaubt: x86_64, aarch64)." >&2
+        exit 1
+        ;;
+esac
 
 for command_name in docker curl tar unzip sha256sum; do
     command -v "$command_name" >/dev/null 2>&1 || {
@@ -31,6 +38,8 @@ docker compose version >/dev/null
 if [ ! -f .env ]; then
     migrated_env=""
     for candidate in \
+        ../restreamer-nistkastenlivestream-0.3.0-dev14/.env \
+        ../restreamer-nistkastenlivestream-0.3.0-dev13/.env \
         ../restreamer-nistkastenlivestream-0.3.0-dev12/.env \
         ../restreamer-nistkastenlivestream-0.3.0-dev11/.env \
         ../restreamer-nistkastenlivestream-0.3.0-dev10/.env \
@@ -168,6 +177,20 @@ if grep -Eq '^RESTREAMER_(PROJECT_NAME|CONTAINER_NAME)=restreamer([[:space:]]*)$
     echo "Abbruch: Name oder Volume der offiziellen Restreamer-Instanz ist reserviert." >&2
     echo "Bitte die RESTREAMER_*-Werte in .env getrennt benennen." >&2
     exit 1
+fi
+
+# Never replace an existing official datarhei container, regardless of its
+# name (for example restreamer-rpi on a Raspberry Pi).
+target_container="$(sed -n 's/^RESTREAMER_CONTAINER_NAME=//p' .env | tail -n 1)"
+target_container="${target_container:-restreamer-nkl}"
+if docker container inspect "$target_container" >/dev/null 2>&1; then
+    existing_image="$(docker inspect "$target_container" --format '{{.Config.Image}}')"
+    case "$existing_image" in
+        datarhei/restreamer|datarhei/restreamer:*)
+            echo "Abbruch: Der offizielle Container $target_container ($existing_image) bleibt unveraendert." >&2
+            exit 1
+            ;;
+    esac
 fi
 
 release_image="$(docker compose -f compose.yaml config --images | head -n 1)"

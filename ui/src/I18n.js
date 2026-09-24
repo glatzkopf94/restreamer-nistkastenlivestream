@@ -20,22 +20,36 @@ import { messages as UK } from './locales/uk/messages.js';
 import { messages as ZH } from './locales/zh-hans/messages.js';
 import * as Storage from './utils/storage';
 
+// Timestamp repair was introduced after these catalogs were last extracted.
+// Lingui strips source text from production builds, so missing messages would
+// otherwise appear as their six-character IDs. Catalogs override these fallbacks.
+const timestampLabels = {
+	CGkMER: 'Repair video timestamps (time-based CFR)',
+	Bj8pBv: 'Output framerate for timestamp repair',
+	lp0qt6: 'Custom output framerate',
+};
+const germanTimestampLabels = {
+	CGkMER: 'Video-Zeitstempel reparieren (zeitbasierte CFR)',
+	Bj8pBv: 'Ausgabe-Bildrate für die Zeitstempelreparatur',
+	lp0qt6: 'Benutzerdefinierte Ausgabe-Bildrate',
+};
+const withTimestampLabels = (catalog, fallbacks = timestampLabels) => ({ ...timestampLabels, ...fallbacks, ...catalog });
+
 i18n.load({
-	en: EN,
-	da: DA,
-	de: DE,
-	el: EL,
-	es: ES,
-	fr: FR,
-	it: IT,
-	ko: KO,
-	pl: PL,
-	'pt-br': PT,
-	ru: RU,
-	sl: SL,
-	tr: TR,
-	uk: UK,
-	'zh-hans': ZH,
+	en: withTimestampLabels(EN),
+	da: withTimestampLabels(DA),
+	de: withTimestampLabels(DE, germanTimestampLabels),
+	el: withTimestampLabels(EL),
+	es: withTimestampLabels(ES),
+	fr: withTimestampLabels(FR),
+	it: withTimestampLabels(IT),
+	ko: withTimestampLabels(KO),
+	pl: withTimestampLabels(PL),
+	ru: withTimestampLabels(RU),
+	sl: withTimestampLabels(SL),
+	tr: withTimestampLabels(TR),
+	uk: withTimestampLabels(UK),
+	'zh-hans': withTimestampLabels(ZH),
 });
 
 const aliases = {

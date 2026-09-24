@@ -1,4 +1,11 @@
-# Teststatus 0.3.0-dev14
+# Teststatus 0.3.0-dev15
+
+dev15 wird vor der Veroeffentlichung nativ auf `ubuntu-24.04` (AMD64) und
+`ubuntu-24.04-arm` (ARM64) gebaut. Jeder Runner startet sein fertiges Image in
+isolierten Test-Volumes und fuehrt denselben Container-Smoke-Test aus. Der
+Release-Job prueft das gemeinsame Manifest auf beide Linux-Architekturen;
+erst danach werden ZIP und Release veroeffentlicht. Ein zusaetzlicher Test
+verhindert, dass ein Manifest mit nur einer Architektur als gueltig gilt.
 
 ## Erfolgreich ausgefuehrt
 
@@ -47,9 +54,9 @@
   gesicherter UI-Updateauftrag und die neuen `restreamer-nkl`-Standardnamen
   geprueft
 
-Die GitHub-Aktion baut und testet das fertige Image vor der Veroeffentlichung.
-Der Container-Smoke-Test wird zusaetzlich nach `./install.sh` auf dem
-Zielserver automatisch ausgefuehrt. Er
+Die GitHub-Aktion baut und testet beide fertigen Images vor der Veroeffentlichung.
+Der Container-Smoke-Test wird nativ auf AMD64 und ARM64 ausgefuehrt und
+zusaetzlich nach `./install.sh` auf dem Zielserver automatisch wiederholt. Er
 prueft innerhalb des fertig gebauten Images RTSP, die datarhei-JSON-Ausgabe von
 FFmpeg, zeitbasierte CFR-Normalisierung, monotone MPEG-TS-Zeitstempel,
 A/V-Ueberlappung, Drawtext, Logo-Overlay, libx264 und den laufenden
@@ -63,10 +70,9 @@ Player-Geometrie, browserweite Ein-Player-Koordination und das
 Smoke-Test den authentifizierten Steuerpfad vom UI zum Manager einschliesslich
 Antwortdatei.
 
-Der reale Container-Smoke-Test und der Reolink-Dauertest erfolgen nach der
-Installation auf dem Debian-Testserver. In der Erstellungsumgebung stand kein
-Docker-Daemon zur Verfuegung; Produktionsbuild, Quelltests und Archivpruefung
-wurden dort vollstaendig ausgefuehrt.
+Ein mehrtaegiger Reolink-Dauertest und die tatsaechliche 4K-Transcoding-Leistung
+auf dem Raspberry Pi 5 koennen erst nach Installation auf dem Zielgeraet
+geprueft werden.
 
 ## Bekannter Zustand der uebernommenen Testsuite
 

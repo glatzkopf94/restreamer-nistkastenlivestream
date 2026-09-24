@@ -10,10 +10,13 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-if [ "$(uname -m)" != "x86_64" ]; then
-    echo "Dieses Release ist fuer x86_64 gebaut und geprueft; erkannt: $(uname -m)" >&2
-    exit 1
-fi
+case "$(uname -m)" in
+    x86_64|aarch64|arm64) ;;
+    *)
+        echo "Lokaler Build erfordert x86_64 oder ein 64-Bit-ARM-System; erkannt: $(uname -m)" >&2
+        exit 1
+        ;;
+esac
 
 command -v docker >/dev/null 2>&1 || {
     echo "Docker wurde nicht gefunden." >&2
@@ -79,17 +82,17 @@ echo "[1/5] FFmpeg 9.0.1 mit Restreamer-Patches bauen"
 docker build --pull --tag nkl/ffmpeg:9.0.1 ffmpeg
 
 echo "[2/5] Restreamer Core bauen"
-docker build --pull --tag nkl/restreamer-core:0.3.0-dev14 core
+docker build --pull --tag nkl/restreamer-core:0.3.0-dev15 core
 
 echo "[3/5] Restreamer UI bauen"
-docker build --pull --tag nkl/restreamer-ui:0.3.0-dev14 ui
+docker build --pull --tag nkl/restreamer-ui:0.3.0-dev15 ui
 
 echo "[4/5] Release-Image zusammensetzen"
 docker build \
     --file bundle/Dockerfile \
     --build-arg FFMPEG_IMAGE=nkl/ffmpeg:9.0.1 \
-    --build-arg CORE_IMAGE=nkl/restreamer-core:0.3.0-dev14 \
-    --build-arg RESTREAMER_UI_IMAGE=nkl/restreamer-ui:0.3.0-dev14 \
+    --build-arg CORE_IMAGE=nkl/restreamer-core:0.3.0-dev15 \
+    --build-arg RESTREAMER_UI_IMAGE=nkl/restreamer-ui:0.3.0-dev15 \
     --tag "$release_image" \
     .
 
@@ -123,5 +126,5 @@ done
 ./tests/smoke-test.sh
 
 echo
-echo "Restreamer Nistkasten Livestream 0.3.0-dev14 wurde lokal gebaut und laeuft auf http://127.0.0.1:${http_port}"
+echo "Restreamer Nistkasten Livestream 0.3.0-dev15 wurde lokal gebaut und laeuft auf http://127.0.0.1:${http_port}"
 echo "Ein vorhandener offizieller Container namens 'restreamer' wurde nicht veraendert."
