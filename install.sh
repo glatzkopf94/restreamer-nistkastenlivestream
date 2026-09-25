@@ -38,6 +38,7 @@ docker compose version >/dev/null
 if [ ! -f .env ]; then
     migrated_env=""
     for candidate in \
+        ../restreamer-nistkastenlivestream-0.3.0-dev15/.env \
         ../restreamer-nistkastenlivestream-0.3.0-dev14/.env \
         ../restreamer-nistkastenlivestream-0.3.0-dev13/.env \
         ../restreamer-nistkastenlivestream-0.3.0-dev12/.env \

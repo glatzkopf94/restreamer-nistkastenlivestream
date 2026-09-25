@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0-dev16 – 2026-09-25 (NKL 1.4 Beta)
+
+- Bei parallelen eingebetteten Playern wird die Aktivierungsmeldung nur noch
+  in zuvor aktivierten Playern angezeigt; nie gestartete Poster bleiben stehen.
+- Die LIVE-Beschriftung von Streams ohne DVR wird innerhalb des roten Rahmens
+  zentriert.
+- DVR-Zeitleisten zeigen halbstuendliche Uhrzeitmarker und beim Ziehen die
+  Uhrzeit des betreffenden Streamsegments statt einer negativen Zeitdifferenz.
+- Vorhandene veroeffentlichte NKL-Player werden beim Start automatisch und
+  gezielt migriert, ohne Kanaleinstellungen und DVR-Aufzeichnungen zu aendern.
+- Vorbereitete Images und Installationspaket fuer AMD64 und ARM64.
+
 ## 0.3.0-dev15 – 2026-09-24
 
 - Vorgebautes ARM64-Image fuer Raspberry Pi 5 mit 64-Bit-System ergaenzt.

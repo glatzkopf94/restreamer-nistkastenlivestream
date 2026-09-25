@@ -2,6 +2,8 @@
 """Static regression tests for the public DVR player controls."""
 
 from pathlib import Path
+import importlib.util
+import tempfile
 import unittest
 
 
@@ -12,6 +14,38 @@ MINIFIED_SKIN = ROOT / "ui/public/_player/videojs/dist/video-js-skin.min.css"
 
 
 class PlayerUITest(unittest.TestCase):
+    def test_existing_public_pages_are_migrated_without_changing_metadata(self):
+        module_path = ROOT / "scripts/migrate-player-1.4.py"
+        spec = importlib.util.spec_from_file_location("player_migration", module_path)
+        migration = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(migration)
+        with tempfile.TemporaryDirectory() as directory:
+            data = Path(directory) / "data"
+            ui = Path(directory) / "ui"
+            (ui / "_player/videojs/dist").mkdir(parents=True)
+            (data / "player/videojs/dist").mkdir(parents=True)
+            (ui / "_player/videojs/player.html").write_text(PLAYER.read_text())
+            (ui / "_player/videojs/dist/video-js-skin.min.css").write_text("new skin")
+            (data / "player/videojs/dist/video-js-skin.min.css").write_text("old skin")
+            old = PLAYER.read_text().replace("NKL 1.4 Beta", "NKL 1.3 Beta")
+            old = old.replace("var publicStreamActivated = false;", "var oldPlayerCode = true;")
+            old = old.replace("?nkl=1.4-beta", "")
+            old = old.replace("{{name}}", "Unchanged channel &amp; title")
+            channel = data / "f74edb08-dfb3-44f5-9873-1afe0699c846.html"
+            channel.write_text(old)
+            custom = data / "custom.html"
+            custom.write_text("<html>Custom page</html>")
+            migration.migrate(data, ui)
+            result = channel.read_text()
+            self.assertIn("Unchanged channel &amp; title", result)
+            self.assertIn("var publicStreamActivated = false;", result)
+            self.assertNotIn("var oldPlayerCode = true;", result)
+            self.assertIn("video-js-skin.min.css?nkl=1.4-beta", result)
+            self.assertEqual(custom.read_text(), "<html>Custom page</html>")
+            self.assertEqual((data / "player/videojs/dist/video-js-skin.min.css").read_text(), "new skin")
+            migration.migrate(data, ui)
+            self.assertEqual(channel.read_text(), result)
+
     def test_duplicate_dvr_panel_is_removed(self):
         html = PLAYER.read_text(encoding="utf-8")
         self.assertNotIn('id="dvr-panel"', html)
@@ -140,7 +174,7 @@ class PlayerUITest(unittest.TestCase):
         global_theme = (ROOT / "ui/src/theme/global.js").read_text(encoding="utf-8")
         background = ROOT / "ui/src/assets/images/background-restreamer.png"
 
-        self.assertIn('"nklVersion": "1.3 Beta"', package)
+        self.assertIn('"nklVersion": "1.4 Beta"', package)
         self.assertIn("`NKL ${pkg.nklVersion || Version}`", version)
         self.assertIn("background-restreamer.png", global_theme)
         self.assertTrue(background.is_file())

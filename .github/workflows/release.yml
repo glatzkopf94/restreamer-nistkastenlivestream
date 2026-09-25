@@ -60,6 +60,8 @@ jobs:
           set -euo pipefail
           python3 tests/test-livechasing-manager.py
           python3 tests/test-player-ui.py
+          node tests/test-player-behavior.js
+          python3 -m py_compile scripts/migrate-player-1.4.py
           python3 tests/test-timestamp-repair.py
           python3 tests/test-update-agent.py
           python3 tests/test-release-architecture.py

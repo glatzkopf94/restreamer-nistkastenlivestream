@@ -20,6 +20,8 @@ docker exec "$container" python3 --version >/dev/null
 docker exec "$container" python3 -c 'import json, urllib.request' >/dev/null
 docker exec "$container" test -x /core/bin/livechasing-manager.py
 docker exec "$container" test -x /core/bin/migrate-timestamp-repair.py
+docker exec "$container" test -x /core/bin/migrate-player-1.4.py
+docker exec "$container" sh -c 'grep -Fq "lc-dvr-markers" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c "ps auxww | grep '[l]ivechasing-manager.py'" >/dev/null
 docker exec "$container" sh -c 'grep -Fq "def purge_dvr_content" /core/bin/livechasing-manager.py'
 docker exec "$container" test -d /core/data/livechasing-control/requests

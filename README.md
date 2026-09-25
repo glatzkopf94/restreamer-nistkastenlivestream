@@ -1,4 +1,4 @@
-# Restreamer Nistkasten Livestream 0.3.0-dev15
+# Restreamer Nistkasten Livestream 0.3.0-dev16
 
 Inoffizieller Fork des datarhei Restreamers fuer Nistkasten-Livestreams,
 hochaufgeloeste HEVC-/H.265-Kameras, aktuelle FFmpeg-Komponenten, frei
@@ -24,10 +24,12 @@ Quellrepository und Container-Image:
   Text und bis zu zwei Logos, ohne erneute Videoberechnung
 - HLS-DVR mit globaler Maximaldauer, Mindestfreiraum und Schalter je Stream
 - oeffentlicher Player mit Zeitleiste, Wiedergabezeit und Sprung zum Livebild
+- DVR-Uhrzeitmarker alle 30 Minuten und lokale Uhrzeit beim Verschieben der Zeitleiste
+- unveraenderte Poster bei nie aktivierten Playern sowie zentrierte LIVE-Anzeige ohne DVR
 - automatische 16:9-/4:3-Player-Geometrie ohne Formatwechsel beim Start
 - optional nur ein aktiver Player pro Browser sowie erneute Play-Bestaetigung
   nach 15 Minuten zur Begrenzung ausgehender HLS-Bandbreite
-- eigene NKL-Oberflaeche mit Weltraumhintergrund und Kennung `NKL 1.3 Beta`
+- eigene NKL-Oberflaeche mit Weltraumhintergrund und Kennung `NKL 1.4 Beta`
 - alle zwei Sekunden aktualisierte, kanalübergreifend deduplizierte
   Zuschauerzahl direkt neben CPU- und RAM-Auslastung
 - vorgebautes Multiarch-Image fuer AMD64 und ARM64 mit schneller Pull-Installation ueber GHCR
@@ -51,8 +53,8 @@ lokaler Build bleibt mit `./build-local.sh` moeglich.
 ## Installation
 
 ```bash
-unzip -o restreamer-nistkastenlivestream-0.3.0-dev15.zip
-cd restreamer-nistkastenlivestream-0.3.0-dev15
+unzip -o restreamer-nistkastenlivestream-0.3.0-dev16.zip
+cd restreamer-nistkastenlivestream-0.3.0-dev16
 chmod 0755 install.sh status.sh uninstall.sh tests/smoke-test.sh
 ./install.sh
 ```
@@ -60,7 +62,7 @@ chmod 0755 install.sh status.sh uninstall.sh tests/smoke-test.sh
 Bei der ersten Installation wird `.env.example` automatisch als `.env`
 uebernommen. Bei einem Update bleibt eine vorhandene `.env` erhalten; bekannte
 lokale dev-Images werden automatisch auf das aktuelle GHCR-Image umgestellt.
-Eine `.env` aus einem direkt benachbarten dev14-, dev13-, dev12-, dev11-,
+Eine `.env` aus einem direkt benachbarten dev15-, dev14-, dev13-, dev12-, dev11-,
 dev10- oder dev9-Verzeichnis wird automatisch uebernommen.
 
 Standardmaessig entstehen das Compose-Projekt und der Container
@@ -365,11 +367,11 @@ mit der technischen Version startet Build, Tests, GHCR-Push und die Erstellung
 des kleinen Installations-ZIPs:
 
 ```bash
-git tag v0.3.0-dev15
-git push origin v0.3.0-dev15
+git tag v0.3.0-dev16
+git push origin v0.3.0-dev16
 ```
 
-Das Multiarch-Image erhaelt die Tags `0.3.0-dev15` und `1.3-beta`. Beide
+Das Multiarch-Image erhaelt die Tags `0.3.0-dev16` und `1.4-beta`. Beide
 enthalten `linux/amd64` und `linux/arm64`. Nach dem ersten Lauf
 muss das Paket auf GitHub unter `Packages -> Package settings -> Change
 visibility` einmalig auf `Public` gestellt werden, damit der Installer ohne
@@ -420,7 +422,7 @@ Details zu Fremdkomponenten und Lizenzen stehen in
 
 ## Status
 
-Version 0.3.0-dev15 / NKL 1.3 Beta ist eine Entwicklungsvorschau. Der
+Version 0.3.0-dev16 / NKL 1.4 Beta ist eine Entwicklungsvorschau. Der
 offizielle Produktivcontainer bleibt unberuehrt. Vor einem breiten
 Produktiveinsatz werden ein mehrtaegiger Dauertest, Browserpruefungen und ein
 Wiederherstellungstest der Konfigurationssicherung empfohlen.

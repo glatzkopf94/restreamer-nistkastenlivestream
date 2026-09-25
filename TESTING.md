@@ -1,6 +1,6 @@
-# Teststatus 0.3.0-dev15
+# Teststatus 0.3.0-dev16
 
-dev15 wird vor der Veroeffentlichung nativ auf `ubuntu-24.04` (AMD64) und
+dev16 wird vor der Veroeffentlichung nativ auf `ubuntu-24.04` (AMD64) und
 `ubuntu-24.04-arm` (ARM64) gebaut. Jeder Runner startet sein fertiges Image in
 isolierten Test-Volumes und fuehrt denselben Container-Smoke-Test aus. Der
 Release-Job prueft das gemeinsame Manifest auf beide Linux-Architekturen;
