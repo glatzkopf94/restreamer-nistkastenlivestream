@@ -63,8 +63,7 @@ def channel_entries(database: dict[str, Any]):
         if not process_id.startswith("restreamer-ui:ingest:") or process_id.endswith("_snapshot") or process_id.endswith("_h264"):
             continue
         metadata = restreamer_metadata(wrapped)
-        # Core stores processes as an array in db.json, whereas process metadata
-        # is keyed by ID. The ingest ID therefore is the reliable source here.
+        # Process metadata is keyed by the ingest ID in Core's database.
         channel_id = process_id.removeprefix("restreamer-ui:ingest:")
         if isinstance(channel_id, str) and re.fullmatch(r"[A-Za-z0-9-]+", channel_id):
             yield channel_id, metadata

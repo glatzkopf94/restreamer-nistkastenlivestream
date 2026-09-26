@@ -1,6 +1,6 @@
-# Teststatus 0.3.0-dev18
+# Teststatus 0.3.0-dev19
 
-dev18 wird vor der Veroeffentlichung nativ auf `ubuntu-24.04` (AMD64) und
+dev19 wird vor der Veroeffentlichung nativ auf `ubuntu-24.04` (AMD64) und
 `ubuntu-24.04-arm` (ARM64) gebaut. Jeder Runner startet sein fertiges Image in
 isolierten Test-Volumes und fuehrt denselben Container-Smoke-Test aus. Der
 Release-Job prueft das gemeinsame Manifest auf beide Linux-Architekturen;
@@ -9,10 +9,15 @@ verhindert, dass ein Manifest mit nur einer Architektur als gueltig gilt.
 
 ## Erfolgreich ausgefuehrt
 
-- Drei neue DVR-Regressionstests fuer gespeicherte Prozesse als Core-Liste,
+dev19 ergaenzt als Release-Gates einen Chromium-Test mit echtem HLS und
+wiederholtem Umschalten zwischen eingebetteten Playern, die Migration des
+Core-Formats `process[id].config.output`, das Kuerzen bestehender Playlists
+und HTTP-Tests fuer die Cache-Header (einschliesslich bedingter GET/HEAD-Anfragen).
+
+- Drei neue DVR-Regressionstests fuer gespeicherte Core-Prozesskonfigurationen,
   HLS- und Tee-Ausgaben, idempotente Migration sowie sichere Ablaufbereinigung
   mehrerer Kanaele. Ein Player-Lauf prueft frisches Poster, normalen Play-Knopf,
-  Hinweis ohne Abdunkelung und das unveraenderte 15-Minuten-Dialogfeld.
+  normale Posteransicht und das unveraenderte 15-Minuten-Dialogfeld.
 - Der native Container-Smoke-Test erzeugt 6-Sekunden-HLS-Segmente bei einer
   2-Sekunden-Zielgroesse und prueft die Begrenzung auf 12 Sekunden tatsaechliche
   Playlistdauer auf AMD64 und ARM64.

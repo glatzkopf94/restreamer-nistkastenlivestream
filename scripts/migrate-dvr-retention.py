@@ -48,7 +48,10 @@ def migrate_data(database):
         # AV_OPT_TYPE_DURATION accepts human-readable seconds at the CLI/tee
         # boundary; FFmpeg converts the value into microseconds internally.
         duration = hours * 3600
-        outputs = process.get("output", [])
+        # Core StoreData serializes app.Process with the FFmpeg config nested
+        # under "config". Also accept legacy flat exports.
+        config = process.get("config", process)
+        outputs = config.get("output", []) if isinstance(config, dict) else []
         if not isinstance(outputs, list) or not outputs or not isinstance(outputs[0], dict):
             continue
         output = outputs[0]
@@ -97,10 +100,10 @@ def migrate_file(path):
     updated = json.dumps(database, ensure_ascii=False, separators=(",", ":"))
     if json.loads(original) == database:
         return 0
-    backup = path.with_name(f"db.pre-dev18-{int(time.time())}.json")
+    backup = path.with_name(f"db.pre-dev19-{int(time.time())}.json")
     shutil.copy2(path, backup)
     os.chmod(backup, 0o600)
-    descriptor, temporary = tempfile.mkstemp(prefix=".db.dev18.", dir=path.parent)
+    descriptor, temporary = tempfile.mkstemp(prefix=".db.dev19.", dir=path.parent)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as target:
             target.write(updated)

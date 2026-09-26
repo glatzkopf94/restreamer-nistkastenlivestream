@@ -27,7 +27,7 @@ IDS = ["8672be5b-5a35-4a56-a970-877d7d728983", "2579719c-8d8b-4f59-a936-3048b181
 def fixture():
     db = {
         "version": 4,
-        "process": [],
+        "process": {},
         "metadata": {
             "system": {"restreamer-ui": {"livechasing": {"dvr": {"maxHours": 3, "minFreeGB": 20}}}},
             "process": {},
@@ -39,7 +39,8 @@ def fixture():
             output = {"options": ["-f", "hls", "-hls_list_size", "10800"], "address": f"{{diskfs}}/{channel}_output_0.m3u8"}
         else:
             output = {"options": ["-f", "tee"], "address": f"[bsfs/a=aac_adtstoasc:f=hls:hls_list_size=10800:hls_time=2]{{diskfs}}/{channel}_output_0.m3u8"}
-        db["process"].append({"id": key, "output": [output], "input": [{"address": "rtsp://secret.example/camera"}]})
+        db["process"][key] = {"id": key, "order": "start", "config": {
+            "output": [output], "input": [{"address": "rtsp://secret.example/camera"}]}}
         db["metadata"]["process"][key] = {
             "restreamer-ui": {"control": {"hls": {"segmentDuration": 2, "listSize": 10800,
                                                    "dvr": {"enabled": True, "hours": 6}}}}
@@ -48,6 +49,17 @@ def fixture():
 
 
 class DVRRetentionTests(unittest.TestCase):
+    def test_nested_core_config_preserves_inputs_and_disabled_channels(self):
+        db = fixture()
+        disabled = "restreamer-ui:ingest:" + IDS[1]
+        db["metadata"]["process"][disabled]["restreamer-ui"]["control"]["hls"]["dvr"]["enabled"] = False
+        original = json.loads(json.dumps(db))
+        self.assertEqual(MIGRATE.migrate_data(db), 1)
+        self.assertEqual(db["process"][disabled], original["process"][disabled])
+        active = "restreamer-ui:ingest:" + IDS[0]
+        self.assertEqual(db["process"][active]["config"]["input"], original["process"][active]["config"]["input"])
+        self.assertEqual(db["process"][active]["order"], "start")
+
     def test_global_window_updates_each_native_and_tee_process_atomically(self):
         with tempfile.TemporaryDirectory() as directory:
             db_path = Path(directory) / "db.json"
@@ -59,11 +71,11 @@ class DVRRetentionTests(unittest.TestCase):
                 hls = result["metadata"]["process"][key]["restreamer-ui"]["control"]["hls"]
                 self.assertEqual(hls["dvr"]["hours"], 3)
                 self.assertEqual(hls["listSize"], 5400)
-            self.assertEqual(result["process"][0]["output"][0]["options"][-2:],
+            self.assertEqual(result["process"]["restreamer-ui:ingest:" + IDS[0]]["config"]["output"][0]["options"][-2:],
                              ["-hls_max_window_duration", "10800"])
-            self.assertIn("hls_max_window_duration=10800", result["process"][1]["output"][0]["address"])
+            self.assertIn("hls_max_window_duration=10800", result["process"]["restreamer-ui:ingest:" + IDS[1]]["config"]["output"][0]["address"])
             self.assertEqual(MIGRATE.migrate_file(db_path), 0)
-            self.assertEqual(len(list(Path(directory).glob("db.pre-dev18-*.json"))), 1)
+            self.assertEqual(len(list(Path(directory).glob("db.pre-dev19-*.json"))), 1)
 
     def test_expired_unreferenced_segments_are_deleted_for_every_dvr_channel(self):
         wall = 1_800_000_000

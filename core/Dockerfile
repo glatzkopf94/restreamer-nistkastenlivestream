@@ -18,6 +18,7 @@ RUN cd /dist/core && \
 	go test ./ffmpeg/skills && \
 	go test ./app/ffmigrate && \
 	go test ./http/middleware/session && \
+	go test ./http/middleware/playercache && \
 	make release && \
 	make import && \
 	make ffmigrate

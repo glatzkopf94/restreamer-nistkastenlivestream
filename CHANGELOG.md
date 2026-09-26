@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0-dev19 – 2026-09-26 (NKL 1.4 Beta)
+
+- DVR-Startmigration auf das echte Core-Speicherformat `process[id].config.output`
+  korrigiert. Vorhandene Kanaele erhalten jetzt die globale Haltezeit.
+- Nach automatischem Stopp wird die Quelle ohne Vorladen wieder eingerichtet;
+  Poster und normale Video.js-Play-Bedienung funktionieren bei wiederholtem Wechsel.
+- Player-HTML, Konfiguration, JavaScript und CSS erhalten `Cache-Control: no-store`.
+  Veroeffentlichte Seiten erhalten versionierte Verweise auf ihre Dateien.
+- Neuer Chromium-Test mit echter HLS-Wiedergabe und mehrfachen Playerwechseln.
+  Der native DVR-Test prueft jetzt auch das Kuerzen einer bestehenden Playlist.
+
 ## 0.3.0-dev18 – 2026-09-26 (NKL 1.4 Beta)
 
 - HLS-Muxer begrenzt alle DVR-Playlists auf die globale Haltezeit anhand der

@@ -13,7 +13,7 @@ import tempfile
 
 
 PLAYER_SCRIPT = re.compile(r"<script>\s*function getQueryParam\(key, defaultValue\) \{.*?</script>", re.S)
-SKIN_LINK = re.compile(r"(player/videojs/dist/video-js-skin\.min\.css)(?:\?nkl=[\w.-]+)?")
+ASSET_LINK = re.compile(r'(?:src|href)="((?:player/[^"?]+\.(?:js|css)|channels/[^"?]+/config\.js))(?:\?[^" ]*)?"')
 
 
 def replace_atomically(path, content):
@@ -41,7 +41,9 @@ def migrate(data, ui):
         if not script or "var player = videojs('player', config)" not in script.group():
             continue
         updated = page[:script.start()] + template_script.group() + page[script.end():]
-        updated = SKIN_LINK.sub(r"\g<1>?nkl=1.4-beta-dev18", updated)
+        updated = ASSET_LINK.sub(lambda match: match.group(0).split("=", 1)[0] + '="' + match.group(1) + '?nkl=1.4-beta-dev19"', updated)
+        if 'http-equiv="Cache-Control"' not in updated:
+            updated = updated.replace("<head>", '<head>\n<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />', 1)
         if updated != page:
             replace_atomically(path, updated.encode("utf-8"))
 

@@ -1,4 +1,4 @@
-# Restreamer Nistkasten Livestream 0.3.0-dev18
+# Restreamer Nistkasten Livestream 0.3.0-dev19
 
 Inoffizieller Fork des datarhei Restreamers fuer Nistkasten-Livestreams,
 hochaufgeloeste HEVC-/H.265-Kameras, aktuelle FFmpeg-Komponenten, frei
@@ -53,8 +53,8 @@ lokaler Build bleibt mit `./build-local.sh` moeglich.
 ## Installation
 
 ```bash
-unzip -o restreamer-nistkastenlivestream-0.3.0-dev18.zip
-cd restreamer-nistkastenlivestream-0.3.0-dev18
+unzip -o restreamer-nistkastenlivestream-0.3.0-dev19.zip
+cd restreamer-nistkastenlivestream-0.3.0-dev19
 chmod 0755 install.sh status.sh uninstall.sh tests/smoke-test.sh
 ./install.sh
 ```
@@ -227,9 +227,14 @@ Player; Kamera-Ingest und serverseitiges Transcoding laufen weiterhin. Bei
 einem DVR-Stream beginnt die Wiedergabe nach einer erzwungenen Reaktivierung
 wieder am aktuellen Live-Rand.
 Beim Wechsel zu einem anderen Player wird fuer den gestoppten Stream ein
-frisches Poster mit dem normalen Play-Symbol geladen. Ein dezenter Hinweis
-darunter erklaert den Wechsel; die 15-Minuten-Meldung mit ihrer Schaltflaeche
-bleibt davon unabhaengig.
+frisches Poster mit dem normalen Play-Symbol geladen. Play oder ein Klick auf
+das Poster startet die Wiedergabe erneut. Die 15-Minuten-Meldung mit ihrer
+Schaltflaeche bleibt davon unabhaengig.
+
+Playerseiten und ihre Konfigurations-, JavaScript- und CSS-Dateien werden mit
+`Cache-Control: no-store` ausgeliefert. Versionierte Verweise sorgen beim
+Neuladen fuer aktuelle Dateien. Eine vor dem Update bereits im Browser
+gespeicherte HTML-Seite kann einmalig ein hartes Neuladen erfordern.
 
 Ohne DVR erscheint nur der rechte `Live`-Schalter mit rotem Punkt in der
 Steuerleiste. DVR-Player behalten denselben Schalter zum Sprung an den
@@ -373,11 +378,11 @@ mit der technischen Version startet Build, Tests, GHCR-Push und die Erstellung
 des kleinen Installations-ZIPs:
 
 ```bash
-git tag v0.3.0-dev18
-git push origin v0.3.0-dev18
+git tag v0.3.0-dev19
+git push origin v0.3.0-dev19
 ```
 
-Das Multiarch-Image erhaelt die Tags `0.3.0-dev18` und `1.4-beta`. Beide
+Das Multiarch-Image erhaelt die Tags `0.3.0-dev19` und `1.4-beta`. Beide
 enthalten `linux/amd64` und `linux/arm64`. Nach dem ersten Lauf
 muss das Paket auf GitHub unter `Packages -> Package settings -> Change
 visibility` einmalig auf `Public` gestellt werden, damit der Installer ohne
@@ -428,7 +433,7 @@ Details zu Fremdkomponenten und Lizenzen stehen in
 
 ## Status
 
-Version 0.3.0-dev18 / NKL 1.4 Beta ist eine Entwicklungsvorschau. Der
+Version 0.3.0-dev19 / NKL 1.4 Beta ist eine Entwicklungsvorschau. Der
 offizielle Produktivcontainer bleibt unberuehrt. Vor einem breiten
 Produktiveinsatz werden ein mehrtaegiger Dauertest, Browserpruefungen und ein
 Wiederherstellungstest der Konfigurationssicherung empfohlen.

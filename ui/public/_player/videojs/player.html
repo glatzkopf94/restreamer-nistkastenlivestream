@@ -1,6 +1,7 @@
 <!doctype html>
 <html>
 	<head>
+		<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
 		<meta charset="utf-8" />
 		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -146,22 +147,6 @@
 				outline: 3px solid #fff;
 				outline-offset: 3px;
 			}
-			#lc-activation-hint {
-				position: absolute;
-				top: calc(50% + 60px);
-				left: 0;
-				width: 100%;
-				z-index: 13;
-				display: none;
-				color: rgba(255, 255, 255, 0.88);
-				font: 14px Arial, Helvetica, sans-serif;
-				text-align: center;
-				text-shadow: 0 1px 3px #000;
-				pointer-events: none;
-			}
-			#lc-activation-hint.is-visible {
-				display: block;
-			}
 		</style>
 		<title>{{name}}</title>
 		<link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
@@ -177,24 +162,24 @@
 			href="channels/{{channelid}}/oembed.xml"
 			title="{{name}}"
 		/>
-		<script src="channels/{{channelid}}/config.js"></script>
-		<link href="player/videojs/dist/video-js.min.css" rel="stylesheet" />
+		<script src="channels/{{channelid}}/config.js?nkl=1.4-beta-dev19"></script>
+		<link href="player/videojs/dist/video-js.min.css?nkl=1.4-beta-dev19" rel="stylesheet" />
 		<link
-			href="player/videojs/dist/video-js-skin.min.css?nkl=1.4-beta-dev18"
+			href="player/videojs/dist/video-js-skin.min.css?nkl=1.4-beta-dev19"
 			rel="stylesheet"
 		/>
 		<link
-			href="player/videojs/dist/videojs-overlay.min.css"
+			href="player/videojs/dist/videojs-overlay.min.css?nkl=1.4-beta-dev19"
 			rel="stylesheet"
 		/>
 		{{#if airplay}}
 		<link
-			href="player/videojs/dist/videojs-airplay.min.css"
+			href="player/videojs/dist/videojs-airplay.min.css?nkl=1.4-beta-dev19"
 			rel="stylesheet"
 		/>
 		{{/if}} {{#if chromecast}}
 		<link
-			href="player/videojs/dist/videojs-chromecast.min.css"
+			href="player/videojs/dist/videojs-chromecast.min.css?nkl=1.4-beta-dev19"
 			rel="stylesheet"
 		/>
 		{{/if}}
@@ -219,14 +204,13 @@
 					<button id="lc-playback-gate-button" type="button"></button>
 				</div>
 			</div>
-			<div id="lc-activation-hint" aria-live="polite"></div>
 		</div>
-		<script src="player/videojs/dist/video.min.js"></script>
-		<script src="player/videojs/dist/videojs-overlay.min.js"></script>
+		<script src="player/videojs/dist/video.min.js?nkl=1.4-beta-dev19"></script>
+		<script src="player/videojs/dist/videojs-overlay.min.js?nkl=1.4-beta-dev19"></script>
 		{{#if airplay}}
-		<script src="player/videojs/dist/videojs-airplay.min.js"></script>
+		<script src="player/videojs/dist/videojs-airplay.min.js?nkl=1.4-beta-dev19"></script>
 		{{/if}} {{#if chromecast}}
-		<script src="player/videojs/dist/videojs-chromecast.min.js"></script>
+		<script src="player/videojs/dist/videojs-chromecast.min.js?nkl=1.4-beta-dev19"></script>
 		<script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 		{{/if}}
 		<script>
@@ -361,19 +345,7 @@
 			var playbackGateButton = document.getElementById(
 				'lc-playback-gate-button',
 			);
-			var activationHint =
-				document.getElementById('lc-activation-hint') ||
-				document.createElement('div');
-			activationHint.id = 'lc-activation-hint';
-			activationHint.setAttribute('aria-live', 'polite');
-			// Existing published pages receive this script at startup. Set the
-			// style here as their original inline stylesheet is kept intact.
-			activationHint.style.cssText =
-				'position:absolute;display:none;top:calc(50% + 60px);left:0;width:100%;' +
-				'z-index:13;color:rgba(255,255,255,.88);font:14px Arial,sans-serif;' +
-				'text-align:center;text-shadow:0 1px 3px #000;pointer-events:none';
 			player.el().appendChild(playbackGate);
-			player.el().appendChild(activationHint);
 
 			var germanPlayer = /^de(?:-|$)/i.test(
 				window.navigator.language || '',
@@ -416,17 +388,6 @@
 			};
 
 			var showPlaybackGate = function (reason) {
-				if (reason === 'single') {
-					activationHint.textContent = germanPlayer
-						? 'Ein anderer Stream wurde aktiviert.'
-						: 'Another stream has been activated.';
-					activationHint.classList.add('is-visible');
-					activationHint.style.display = 'block';
-					playbackGate.classList.remove('is-visible');
-					return;
-				}
-				activationHint.classList.remove('is-visible');
-				activationHint.style.display = 'none';
 				var sessionLimit = reason === 'session';
 				playbackGateMessage.textContent = sessionLimit
 					? germanPlayer
@@ -455,8 +416,7 @@
 					return;
 				if (
 					playbackGateReason === reason &&
-					(playbackGate.classList.contains('is-visible') ||
-						activationHint.classList.contains('is-visible'))
+					playbackGate.classList.contains('is-visible')
 				) {
 					return;
 				}
@@ -465,15 +425,26 @@
 				stopPlaybackTimer(false);
 				playbackRemainingMilliseconds = playbackLimitMilliseconds;
 				player.pause();
-				player.reset();
-				player.poster(
-					reason === 'single'
-						? playerConfig.poster +
+				if (reason === 'single') {
+					player.autoplay(false);
+					player.preload('none');
+					player.one('playerreset', function () {
+						player.src(publicPlayerSources);
+						player.poster(
+							playerConfig.poster +
 							(String(playerConfig.poster).includes('?') ? '&' : '?') +
-							't=' +
-							Date.now()
-						: config.poster,
-				);
+							't=' + Date.now(),
+						);
+						player.hasStarted(false);
+						publicStreamActivated = false;
+						playbackGateReason = '';
+						playbackGate.classList.remove('is-visible');
+					});
+					player.reset();
+					return;
+				}
+				player.reset();
+				player.poster(config.poster);
 				showPlaybackGate(reason);
 			};
 
@@ -526,7 +497,7 @@
 
 			var claimPublicStream = function () {
 				if (!playerPlayback.singleActiveStream) return;
-				var now = Date.now();
+				var now = Math.max(Date.now(), (Number(latestPlayerClaim.slice(0, 16)) || 0) + 1);
 				var claim = {
 					type: 'active-player',
 					token: playerToken,
@@ -576,8 +547,6 @@
 				playbackGateReason = '';
 				playbackRemainingMilliseconds = playbackLimitMilliseconds;
 				playbackGate.classList.remove('is-visible');
-				activationHint.classList.remove('is-visible');
-				activationHint.style.display = 'none';
 				claimPublicStream();
 				player.error(null);
 				player.src(publicPlayerSources);
@@ -603,19 +572,6 @@
 			};
 
 			playbackGateButton.addEventListener('click', activatePublicStream);
-			// Reuse the normal poster Play button after another stream takes over.
-			// reset() releases HLS, so the source must be restored before playing.
-			var bigPlayButton = player.bigPlayButton;
-			if (bigPlayButton) {
-				var originalBigPlay = bigPlayButton.handleClick;
-				bigPlayButton.handleClick = function (event) {
-					if (playbackGateReason === 'single') {
-						activatePublicStream();
-						return;
-					}
-					return originalBigPlay.call(this, event);
-				};
-			}
 			player.on('playing', function () {
 				if (playbackGateReason) return;
 				publicStreamActivated = true;

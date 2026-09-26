@@ -59,6 +59,7 @@ import (
 	mwiplimit "github.com/datarhei/core/v16/http/middleware/iplimit"
 	mwlog "github.com/datarhei/core/v16/http/middleware/log"
 	mwmime "github.com/datarhei/core/v16/http/middleware/mime"
+	mwplayercache "github.com/datarhei/core/v16/http/middleware/playercache"
 	mwredirect "github.com/datarhei/core/v16/http/middleware/redirect"
 	mwsession "github.com/datarhei/core/v16/http/middleware/session"
 
@@ -334,6 +335,7 @@ func NewServer(config Config) (Server, error) {
 	s.router.HTTPErrorHandler = errorhandler.HTTPErrorHandler
 	s.router.Validator = validator.New()
 	s.router.Use(s.middleware.log)
+	s.router.Use(mwplayercache.New())
 	s.router.Use(middleware.RecoverWithConfig(middleware.RecoverConfig{
 		LogErrorFunc: func(c echo.Context, err error, stack []byte) error {
 			rows := strings.Split(string(stack), "\n")
@@ -459,6 +461,9 @@ func (s *server) setRoutes() {
 		if filesystem.Cache != nil {
 			mwcache := mwcache.NewWithConfig(mwcache.Config{
 				Cache: filesystem.Cache,
+				Skipper: func(c echo.Context) bool {
+					return mwplayercache.IsPlayerResource(c.Request().URL.Path)
+				},
 			})
 			fs.Use(mwcache)
 		}

@@ -29,7 +29,7 @@ function makePlayer(dvr = false, legacyPage = false) {
   const message = element();
   const button = element();
   const hint = element();
-  const bigPlayButton = {handleClick() {}};
+  const bigPlayButton = {handleClick() { player.play(); }};
   const holder = element();
   const progress = element();
   progress.querySelector = () => holder;
@@ -55,10 +55,12 @@ function makePlayer(dvr = false, legacyPage = false) {
   const player = {
     el: () => element(), bigPlayButton, controlBar: { progressControl: { el: () => progress } },
     on(name, fn) { (callbacks[name] ||= []).push(fn); },
+    one(name, fn) { const once = () => {callbacks[name] = callbacks[name].filter(f => f !== once); fn();}; this.on(name, once); },
+    autoplay() {}, preload() {}, hasStarted(value) {this.started = value;},
     emit(name) { for (const fn of callbacks[name] || []) fn(); },
     ready(fn) { fn(); }, license() {}, addClass() {},
-    pause() {}, reset() { resets++; }, poster(value) { poster = value; }, error() {}, src(value) { sources = value; },
-    play() { return Promise.resolve(); },
+    pause() {}, reset() { resets++; sources = null; this.emit('playerreset'); }, poster(value) { poster = value; }, error() {}, src(value) { sources = value; },
+    play() { assert.ok(sources, 'native Play requires an attached source'); this.started = true; this.emit('playing'); return Promise.resolve(); },
     seekable: () => ({ length: 1, start: () => 0, end: () => 7200 }),
     tech: () => ({ vhs: { playlists: { media: () => ({ segments: [{dateTimeString: '2026-09-25T14:59:58Z', duration: 2}] }) } } }),
   };
@@ -82,16 +84,14 @@ assert.equal(untouched.resets, 0);
 const third = makePlayer();
 third.player.emit('playing');
 assert.equal(first.gate.classList.contains('is-visible'), false, 'single-player stop must not darken the poster');
-assert.equal(first.hint.classList.contains('is-visible'), true);
-assert.equal(first.hint.style.display, 'block');
-assert.equal(first.hint.textContent, 'Ein anderer Stream wurde aktiviert.');
+assert.equal(first.player.started, false);
 assert.ok(first.poster.includes('t='), 'poster must be loaded with a fresh URL');
 assert.equal(first.button.textContent, '', 'single-player stop must not offer another button');
 assert.equal(untouched.gate.classList.contains('is-visible'), false);
 assert.equal(untouched.resets, 0);
 first.player.bigPlayButton.handleClick();
-assert.equal(first.hint.classList.contains('is-visible'), false);
-assert.equal(first.hint.style.display, 'none');
+assert.equal(first.player.started, true);
+assert.equal(third.player.started, false);
 assert.ok(first.sources && first.sources.length, 'poster Play must restore the HLS source');
 
 const session = makePlayer();
@@ -109,4 +109,4 @@ assert.ok(labels.includes('14:00'));
 const tooltip = dvr.holder.children.find(child => child.className === 'lc-dvr-clock-tooltip');
 dvr.holder.events.pointermove({clientX: 410});
 assert.equal(tooltip.textContent, '14:00', 'drag/hover must display clock time rather than -1:00');
-console.log('Player behavior: fresh poster hint, native Play, session gate, DVR ticks and clock tooltip OK');
+console.log('Player behavior: normal poster reset, native Play, session gate, DVR ticks and clock tooltip OK');

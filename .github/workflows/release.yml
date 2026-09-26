@@ -19,6 +19,23 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  player-browser:
+    name: Test public players in Chromium
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Browser-Test vorbereiten
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          npm install --prefix /tmp/nkl-browser-test playwright@1.62.1
+          /tmp/nkl-browser-test/node_modules/.bin/playwright install --with-deps chromium
+      - name: Echte HLS-Player mehrfach stoppen und reaktivieren
+        env:
+          NKL_PLAYWRIGHT: /tmp/nkl-browser-test/node_modules/playwright
+        run: node tests/test-player-browser.cjs
+
   build:
     name: Build and smoke test ${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
@@ -137,7 +154,7 @@ jobs:
 
   publish:
     name: Publish multiarch image and release
-    needs: build
+    needs: [build, player-browser]
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:

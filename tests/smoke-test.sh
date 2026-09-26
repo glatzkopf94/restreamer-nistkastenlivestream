@@ -38,7 +38,7 @@ docker exec "$container" sh -c 'grep -Fq "lc-position-bottom-center" /core/ui/_p
 docker exec "$container" sh -c 'grep -Fq "window.setTimeout(refreshOverlayText, 5000)" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c 'grep -Fq "var safeStart = first + dvrSegmentDuration * 2" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c 'grep -Fq "livechasing-active-player-v1" /core/ui/_player/videojs/player.html'
-docker exec "$container" sh -c 'grep -Fq "lc-activation-hint" /core/ui/_player/videojs/player.html'
+docker exec "$container" sh -c 'grep -Fq "player.hasStarted(false)" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c 'grep -Fq "playbackLimitMilliseconds" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c 'grep -Fq "playbackActivationPending" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c 'grep -Fq "updatePlayerOverlayLayout" /core/ui/_player/videojs/player.html'
@@ -51,6 +51,24 @@ docker exec "$container" sh -c 'test "$NKL_RELEASE_VERSION" = "'"$RELEASE_VERSIO
 docker exec "$container" sh -c 'grep -Fq "livechasing-viewer-id-v1" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c 'ls /core/ui/static/media/background-restreamer.*.png >/dev/null'
 
+docker exec -i "$container" python3 - <<'PY'
+from pathlib import Path
+from urllib.request import Request, urlopen
+
+page = Path('/core/data/nkl-cache-smoke.html')
+page.write_text('<html>current player</html>')
+try:
+    for method in ('GET', 'HEAD'):
+        request = Request('http://127.0.0.1:8080/nkl-cache-smoke.html', method=method,
+                          headers={'If-None-Match': 'old', 'If-Modified-Since': 'Wed, 23 Sep 2026 12:00:00 GMT'})
+        with urlopen(request, timeout=10) as response:
+            assert response.status == 200
+            assert 'no-store' in response.headers.get('Cache-Control', '')
+            assert response.headers.get('Pragma') == 'no-cache'
+finally:
+    page.unlink(missing_ok=True)
+PY
+
 # Segments are intentionally three times longer than the requested hls_time.
 # The playlist must retain 12 seconds of actual video, not twelve seconds
 # worth of nominal two-second segment counts.
@@ -59,8 +77,14 @@ docker exec -i "$container" sh -ec '
     trap "rm -rf /tmp/nkl-dvr-window-smoke" EXIT
     ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc2=size=160x90:rate=5 \
       -t 40 -c:v libx264 -preset ultrafast -g 30 -keyint_min 30 -sc_threshold 0 \
-      -f hls -hls_time 2 -hls_list_size 100 -hls_max_window_duration 12 \
+      -f hls -hls_time 2 -hls_list_size 100 \
       -hls_flags delete_segments \
+      -hls_segment_filename /tmp/nkl-dvr-window-smoke/seg%03d.ts \
+      /tmp/nkl-dvr-window-smoke/stream.m3u8
+    ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc2=size=160x90:rate=5 \
+      -t 12 -c:v libx264 -preset ultrafast -g 30 -keyint_min 30 -sc_threshold 0 \
+      -f hls -hls_time 2 -hls_list_size 100 -hls_max_window_duration 12 \
+      -hls_flags append_list+delete_segments \
       -hls_segment_filename /tmp/nkl-dvr-window-smoke/seg%03d.ts \
       /tmp/nkl-dvr-window-smoke/stream.m3u8
     python3 - <<"PY"
