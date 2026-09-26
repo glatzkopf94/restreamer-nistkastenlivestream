@@ -21,6 +21,8 @@ docker exec "$container" python3 -c 'import json, urllib.request' >/dev/null
 docker exec "$container" test -x /core/bin/livechasing-manager.py
 docker exec "$container" test -x /core/bin/migrate-timestamp-repair.py
 docker exec "$container" test -x /core/bin/migrate-player-1.4.py
+docker exec "$container" test -x /core/bin/migrate-dvr-retention.py
+docker exec "$container" ffmpeg -hide_banner -h muxer=hls 2>&1 | grep -q hls_max_window_duration
 docker exec "$container" sh -c 'grep -Fq "lc-dvr-markers" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c "ps auxww | grep '[l]ivechasing-manager.py'" >/dev/null
 docker exec "$container" sh -c 'grep -Fq "def purge_dvr_content" /core/bin/livechasing-manager.py'
@@ -36,6 +38,7 @@ docker exec "$container" sh -c 'grep -Fq "lc-position-bottom-center" /core/ui/_p
 docker exec "$container" sh -c 'grep -Fq "window.setTimeout(refreshOverlayText, 5000)" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c 'grep -Fq "var safeStart = first + dvrSegmentDuration * 2" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c 'grep -Fq "livechasing-active-player-v1" /core/ui/_player/videojs/player.html'
+docker exec "$container" sh -c 'grep -Fq "lc-activation-hint" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c 'grep -Fq "playbackLimitMilliseconds" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c 'grep -Fq "playbackActivationPending" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c 'grep -Fq "updatePlayerOverlayLayout" /core/ui/_player/videojs/player.html'
@@ -47,6 +50,31 @@ docker exec "$container" sh -c 'grep -Fq "install-latest-nkl-release" /core/ui/s
 docker exec "$container" sh -c 'test "$NKL_RELEASE_VERSION" = "'"$RELEASE_VERSION"'"'
 docker exec "$container" sh -c 'grep -Fq "livechasing-viewer-id-v1" /core/ui/_player/videojs/player.html'
 docker exec "$container" sh -c 'ls /core/ui/static/media/background-restreamer.*.png >/dev/null'
+
+# Segments are intentionally three times longer than the requested hls_time.
+# The playlist must retain 12 seconds of actual video, not twelve seconds
+# worth of nominal two-second segment counts.
+docker exec -i "$container" sh -ec '
+    mkdir -p /tmp/nkl-dvr-window-smoke
+    trap "rm -rf /tmp/nkl-dvr-window-smoke" EXIT
+    ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc2=size=160x90:rate=5 \
+      -t 40 -c:v libx264 -preset ultrafast -g 30 -keyint_min 30 -sc_threshold 0 \
+      -f hls -hls_time 2 -hls_list_size 100 -hls_max_window_duration 12 \
+      -hls_flags delete_segments \
+      -hls_segment_filename /tmp/nkl-dvr-window-smoke/seg%03d.ts \
+      /tmp/nkl-dvr-window-smoke/stream.m3u8
+    python3 - <<"PY"
+from pathlib import Path
+import re
+
+root = Path("/tmp/nkl-dvr-window-smoke")
+playlist = (root / "stream.m3u8").read_text()
+durations = [float(value) for value in re.findall(r"#EXTINF:([0-9.]+)", playlist)]
+assert durations and sum(durations) <= 12.01, durations
+assert len(durations) <= 2, durations
+assert len(list(root.glob("seg*.ts"))) < 7
+PY
+'
 
 dvr_control_id='00000000-0000-4000-8000-000000000009'
 dvr_control_request="/core/data/livechasing-control/requests/$dvr_control_id.json"

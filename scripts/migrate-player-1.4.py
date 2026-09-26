@@ -41,7 +41,7 @@ def migrate(data, ui):
         if not script or "var player = videojs('player', config)" not in script.group():
             continue
         updated = page[:script.start()] + template_script.group() + page[script.end():]
-        updated = SKIN_LINK.sub(r"\g<1>?nkl=1.4-beta-dev17", updated)
+        updated = SKIN_LINK.sub(r"\g<1>?nkl=1.4-beta-dev18", updated)
         if updated != page:
             replace_atomically(path, updated.encode("utf-8"))
 

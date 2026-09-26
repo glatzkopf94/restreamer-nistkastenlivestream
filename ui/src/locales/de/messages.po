@@ -203,8 +203,8 @@ msgid "Allow only one active stream per viewer"
 msgstr "Nur einen aktiven Stream pro Zuschauer erlauben"
 
 #: src/views/Settings.js:1769
-msgid "Allowed range: 1 to 168 hours. New values are applied when a channel is saved."
-msgstr "Zulässiger Bereich: 1 bis 168 Stunden. Neue Werte werden beim Speichern eines Kanals übernommen."
+msgid "Allowed range: 1 to 168 hours. New values apply to all DVR channels after restarting the application."
+msgstr "Zulässiger Bereich: 1 bis 168 Stunden. Neue Werte gelten nach dem Neustart für alle DVR-Kanäle."
 
 #: src/misc/filters/video/TextOverlay.js:
 #~ msgid "Allowed: /core/data/overlays/*.txt"

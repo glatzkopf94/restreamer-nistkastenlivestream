@@ -1,0 +1,50 @@
+--- a/libavformat/hlsenc.c
++++ b/libavformat/hlsenc.c
+@@ -205,6 +205,7 @@
+     int64_t time;          // Set by a private option.
+     int64_t init_time;     // Set by a private option.
+     int max_nb_segments;   // Set by a private option.
++    int64_t max_window_duration; // Maximum duration of listed segments in microseconds.
+     int hls_delete_threshold; // Set by a private option.
+     uint32_t flags;        // enum HLSFlags
+     uint32_t pl_type;      // enum PlaylistType
+@@ -1117,8 +1118,19 @@
+     if (hls->pl_type != PLAYLIST_TYPE_NONE)
+         hls->max_nb_segments = 0;
+ 
+-    if (hls->max_nb_segments && vs->nb_entries >= hls->max_nb_segments) {
++    double window_duration = 0;
++    HLSSegment *window_segment;
++    if (hls->max_window_duration > 0) {
++        for (window_segment = vs->segments; window_segment; window_segment = window_segment->next)
++            window_duration += window_segment->duration;
++    }
++    while (vs->segments->next &&
++           ((hls->max_nb_segments && vs->nb_entries >= hls->max_nb_segments) ||
++            (hls->max_window_duration > 0 &&
++             window_duration > hls->max_window_duration / (double)AV_TIME_BASE))) {
+         en = vs->segments;
++        window_duration -= en->duration;
++        vs->nb_entries--;
+         if (!en->next->discont_program_date_time && !en->discont_program_date_time)
+             vs->initial_prog_date_time += en->duration;
+         vs->segments = en->next;
+@@ -1130,8 +1142,8 @@
+                 return ret;
+         } else
+             av_freep(&en);
+-    } else
+-        vs->nb_entries++;
++    }
++    vs->nb_entries++;
+ 
+     if (hls->max_seg_size > 0) {
+         return 0;
+@@ -3133,6 +3145,7 @@
+     {"hls_time",      "set segment length",                      OFFSET(time),          AV_OPT_TYPE_DURATION, {.i64 = 2000000}, 0, INT64_MAX, E},
+     {"hls_init_time", "set segment length at init list",         OFFSET(init_time),     AV_OPT_TYPE_DURATION, {.i64 = 0},       0, INT64_MAX, E},
+     {"hls_list_size", "set maximum number of playlist entries",  OFFSET(max_nb_segments),    AV_OPT_TYPE_INT,    {.i64 = 5},     0, INT_MAX, E},
++    {"hls_max_window_duration", "maximum playlist duration in actual segment time", OFFSET(max_window_duration), AV_OPT_TYPE_DURATION, {.i64 = 0}, 0, INT64_MAX, E},
+     {"hls_delete_threshold", "set number of unreferenced segments to keep before deleting",  OFFSET(hls_delete_threshold),    AV_OPT_TYPE_INT,    {.i64 = 1},     1, INT_MAX, E},
+     {"hls_vtt_options","set hls vtt list of options for the container format used for hls", OFFSET(vtt_format_options_str), AV_OPT_TYPE_STRING, {.str = NULL},  0, 0,    E},
+     {"hls_allow_cache", "explicitly set whether the client MAY (1) or MUST NOT (0) cache media segments", OFFSET(allowcache), AV_OPT_TYPE_INT, {.i64 = -1}, INT_MIN, INT_MAX, E},

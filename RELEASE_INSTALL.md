@@ -1,7 +1,7 @@
 # NKL Restreamer installieren
 
 Dieses Installationspaket laedt das fertig gebaute AMD64-/ARM64-Docker-Image
-`ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev17`.
+`ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev18`.
 FFmpeg, Core und UI werden auf dem Zielserver nicht mehr kompiliert.
 
 ## Installation oder Update
@@ -9,8 +9,8 @@ FFmpeg, Core und UI werden auf dem Zielserver nicht mehr kompiliert.
 Als `root` ausfuehren:
 
 ```bash
-unzip -o restreamer-nistkastenlivestream-0.3.0-dev17.zip
-cd restreamer-nistkastenlivestream-0.3.0-dev17
+unzip -o restreamer-nistkastenlivestream-0.3.0-dev18.zip
+cd restreamer-nistkastenlivestream-0.3.0-dev18
 chmod 0755 install.sh status.sh uninstall.sh tests/smoke-test.sh
 ./install.sh
 ```
@@ -25,6 +25,12 @@ Beim ersten Start migriert dev13 ausschliesslich gespeicherte Graphen der Form
 `setpts=N/(<fps>*TB)` auf die zeitbasierte CFR-Reparatur. Die Core-Datenbank
 wird davor gesichert; Kamera-URLs oder Zugangsdaten werden nicht ausgegeben.
 DVR-Dauer, Segmentdateien, `diskfs` und Aufraeumregeln bleiben unveraendert.
+
+Beim Start von dev18 wird die globale DVR-Haltezeit in alle vorhandenen
+DVR-Prozesse uebernommen. Davor wird die Core-Datenbank gesichert. Alle
+Playlistfenster verwenden anschliessend die tatsaechliche Segmentdauer;
+abgelaufene und nicht mehr referenzierte DVR-Dateien werden automatisch
+entfernt. Konfigurationen und gueltige Aufzeichnungen bleiben erhalten.
 
 Die bisherigen Standardnamen `restreamer-livechasing` werden automatisch auf
 `restreamer-nkl` umgestellt. Dabei werden die alten Konfigurations- und

@@ -1,6 +1,18 @@
 # Changelog
 
-## 0.3.0-dev17 – 2026-09-26 (NKL 1.4 Beta)
+## 0.3.0-dev18 – 2026-09-26 (NKL 1.4 Beta)
+
+- HLS-Muxer begrenzt alle DVR-Playlists auf die globale Haltezeit anhand der
+  tatsaechlichen Segmentdauer; neue und gespeicherte Kanaele nutzen denselben
+  Grenzwert. Die Core-Datenbank wird vor der Startmigration gesichert.
+- Abgelaufene, nicht mehr referenzierte DVR-Segmente werden kanalweise
+  regelmaessig entfernt, damit der Plattenplatz freigegeben wird.
+- Automatisch gestoppte Player laden ihr aktuelles Poster und zeigen nur den
+  kleinen Hinweis unter dem normalen Play-Symbol. Der 15-Minuten-Dialog
+  einschliesslich `Weiter ansehen` bleibt erhalten.
+- Nativer AMD64-/ARM64-Smoke-Test mit absichtlich laengeren HLS-Segmenten.
+
+## 0.3.0-dev18 – 2026-09-26 (NKL 1.4 Beta)
 
 - Doppelte LIVE-Anzeige ohne DVR entfernt; der rechte Video.js-Schalter mit
   rotem Punkt bleibt sichtbar und bedienbar.

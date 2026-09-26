@@ -203,8 +203,8 @@ msgid "Allow only one active stream per viewer"
 msgstr "Allow only one active stream per viewer"
 
 #: src/views/Settings.js:1769
-msgid "Allowed range: 1 to 168 hours. New values are applied when a channel is saved."
-msgstr "Allowed range: 1 to 168 hours. New values are applied when a channel is saved."
+msgid "Allowed range: 1 to 168 hours. New values apply to all DVR channels after restarting the application."
+msgstr "Allowed range: 1 to 168 hours. New values apply to all DVR channels after restarting the application."
 
 #: src/views/Edit/Sources/ALSA.js:157
 msgid "ALSA"

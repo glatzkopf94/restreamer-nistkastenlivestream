@@ -146,6 +146,22 @@
 				outline: 3px solid #fff;
 				outline-offset: 3px;
 			}
+			#lc-activation-hint {
+				position: absolute;
+				top: calc(50% + 60px);
+				left: 0;
+				width: 100%;
+				z-index: 13;
+				display: none;
+				color: rgba(255, 255, 255, 0.88);
+				font: 14px Arial, Helvetica, sans-serif;
+				text-align: center;
+				text-shadow: 0 1px 3px #000;
+				pointer-events: none;
+			}
+			#lc-activation-hint.is-visible {
+				display: block;
+			}
 		</style>
 		<title>{{name}}</title>
 		<link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
@@ -164,7 +180,7 @@
 		<script src="channels/{{channelid}}/config.js"></script>
 		<link href="player/videojs/dist/video-js.min.css" rel="stylesheet" />
 		<link
-			href="player/videojs/dist/video-js-skin.min.css?nkl=1.4-beta-dev17"
+			href="player/videojs/dist/video-js-skin.min.css?nkl=1.4-beta-dev18"
 			rel="stylesheet"
 		/>
 		<link
@@ -203,6 +219,7 @@
 					<button id="lc-playback-gate-button" type="button"></button>
 				</div>
 			</div>
+			<div id="lc-activation-hint" aria-live="polite"></div>
 		</div>
 		<script src="player/videojs/dist/video.min.js"></script>
 		<script src="player/videojs/dist/videojs-overlay.min.js"></script>
@@ -344,7 +361,19 @@
 			var playbackGateButton = document.getElementById(
 				'lc-playback-gate-button',
 			);
+			var activationHint =
+				document.getElementById('lc-activation-hint') ||
+				document.createElement('div');
+			activationHint.id = 'lc-activation-hint';
+			activationHint.setAttribute('aria-live', 'polite');
+			// Existing published pages receive this script at startup. Set the
+			// style here as their original inline stylesheet is kept intact.
+			activationHint.style.cssText =
+				'position:absolute;display:none;top:calc(50% + 60px);left:0;width:100%;' +
+				'z-index:13;color:rgba(255,255,255,.88);font:14px Arial,sans-serif;' +
+				'text-align:center;text-shadow:0 1px 3px #000;pointer-events:none';
 			player.el().appendChild(playbackGate);
+			player.el().appendChild(activationHint);
 
 			var germanPlayer = /^de(?:-|$)/i.test(
 				window.navigator.language || '',
@@ -387,21 +416,28 @@
 			};
 
 			var showPlaybackGate = function (reason) {
+				if (reason === 'single') {
+					activationHint.textContent = germanPlayer
+						? 'Ein anderer Stream wurde aktiviert.'
+						: 'Another stream has been activated.';
+					activationHint.classList.add('is-visible');
+					activationHint.style.display = 'block';
+					playbackGate.classList.remove('is-visible');
+					return;
+				}
+				activationHint.classList.remove('is-visible');
+				activationHint.style.display = 'none';
 				var sessionLimit = reason === 'session';
 				playbackGateMessage.textContent = sessionLimit
 					? germanPlayer
 						? '15 Minuten erreicht. Zum Weiterschauen erneut Play drücken.'
 						: '15 minutes reached. Press Play again to continue watching.'
-					: germanPlayer
-						? 'Ein anderer Stream wurde aktiviert.'
-						: 'Another stream has been activated.';
+					: '';
 				playbackGateButton.textContent = sessionLimit
 					? germanPlayer
 						? '▶ Weiter ansehen'
 						: '▶ Continue watching'
-					: germanPlayer
-						? '▶ Diesen Stream aktivieren'
-						: '▶ Activate this stream';
+					: '';
 				playbackGate.classList.add('is-visible');
 			};
 
@@ -419,7 +455,8 @@
 					return;
 				if (
 					playbackGateReason === reason &&
-					playbackGate.classList.contains('is-visible')
+					(playbackGate.classList.contains('is-visible') ||
+						activationHint.classList.contains('is-visible'))
 				) {
 					return;
 				}
@@ -429,7 +466,14 @@
 				playbackRemainingMilliseconds = playbackLimitMilliseconds;
 				player.pause();
 				player.reset();
-				player.poster(config.poster);
+				player.poster(
+					reason === 'single'
+						? playerConfig.poster +
+							(String(playerConfig.poster).includes('?') ? '&' : '?') +
+							't=' +
+							Date.now()
+						: config.poster,
+				);
 				showPlaybackGate(reason);
 			};
 
@@ -532,6 +576,8 @@
 				playbackGateReason = '';
 				playbackRemainingMilliseconds = playbackLimitMilliseconds;
 				playbackGate.classList.remove('is-visible');
+				activationHint.classList.remove('is-visible');
+				activationHint.style.display = 'none';
 				claimPublicStream();
 				player.error(null);
 				player.src(publicPlayerSources);
@@ -557,6 +603,19 @@
 			};
 
 			playbackGateButton.addEventListener('click', activatePublicStream);
+			// Reuse the normal poster Play button after another stream takes over.
+			// reset() releases HLS, so the source must be restored before playing.
+			var bigPlayButton = player.bigPlayButton;
+			if (bigPlayButton) {
+				var originalBigPlay = bigPlayButton.handleClick;
+				bigPlayButton.handleClick = function (event) {
+					if (playbackGateReason === 'single') {
+						activatePublicStream();
+						return;
+					}
+					return originalBigPlay.call(this, event);
+				};
+			}
 			player.on('playing', function () {
 				if (playbackGateReason) return;
 				publicStreamActivated = true;

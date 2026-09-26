@@ -1,4 +1,4 @@
-# Restreamer Nistkasten Livestream 0.3.0-dev17
+# Restreamer Nistkasten Livestream 0.3.0-dev18
 
 Inoffizieller Fork des datarhei Restreamers fuer Nistkasten-Livestreams,
 hochaufgeloeste HEVC-/H.265-Kameras, aktuelle FFmpeg-Komponenten, frei
@@ -53,8 +53,8 @@ lokaler Build bleibt mit `./build-local.sh` moeglich.
 ## Installation
 
 ```bash
-unzip -o restreamer-nistkastenlivestream-0.3.0-dev17.zip
-cd restreamer-nistkastenlivestream-0.3.0-dev17
+unzip -o restreamer-nistkastenlivestream-0.3.0-dev18.zip
+cd restreamer-nistkastenlivestream-0.3.0-dev18
 chmod 0755 install.sh status.sh uninstall.sh tests/smoke-test.sh
 ./install.sh
 ```
@@ -226,6 +226,10 @@ Schutzfunktionen reduzieren den ausgehenden HLS-Datenverkehr ungenutzter
 Player; Kamera-Ingest und serverseitiges Transcoding laufen weiterhin. Bei
 einem DVR-Stream beginnt die Wiedergabe nach einer erzwungenen Reaktivierung
 wieder am aktuellen Live-Rand.
+Beim Wechsel zu einem anderen Player wird fuer den gestoppten Stream ein
+frisches Poster mit dem normalen Play-Symbol geladen. Ein dezenter Hinweis
+darunter erklaert den Wechsel; die 15-Minuten-Meldung mit ihrer Schaltflaeche
+bleibt davon unabhaengig.
 
 Ohne DVR erscheint nur der rechte `Live`-Schalter mit rotem Punkt in der
 Steuerleiste. DVR-Player behalten denselben Schalter zum Sprung an den
@@ -247,12 +251,14 @@ Unter `Systemeinstellungen -> DVR` legt der Administrator fest:
 
 Am Stream wird DVR unter `Verarbeitung & Steuerung -> HLS-Ausgabe`
 aktiviert. Restreamer schaltet dann automatisch auf persistenten
-Festplattenspeicher, berechnet die erforderliche Playlistgroesse und aktiviert
-die anzahlbasierte Segmentbereinigung. Eine zusaetzliche errechnete
-Altersgrenze wird bei DVR bewusst nicht verwendet, da reale Segmente erst am
-naechsten Keyframe enden und dadurch etwas laenger als der Sollwert sein
-koennen. Die neue Dauer wird auf bereits gespeicherte Streams
-angewendet, sobald der jeweilige Stream erneut gespeichert wird.
+Festplattenspeicher, berechnet die Playlistgroesse und begrenzt die Playlist
+zusaetzlich anhand der tatsaechlichen Segmentdauer. Beim Upgrade werden alle
+gespeicherten DVR-Kanaele auf die globale Haltezeit umgestellt, ohne sie
+einzeln erneut zu speichern. Spaetere Aenderungen der globalen Stundenanzahl
+gelten nach dem Neustart fuer alle Kanaele. Der Manager entfernt jede Minute
+abgelaufene, nicht mehr in einer laufenden Playlist referenzierte Segmente;
+bereits ausgelieferte Segmente bleiben waehrend des Playlist-Wechsels
+geschuetzt. Die geloeschten Segmente geben Festplattenspeicher wieder frei.
 
 Der gespeicherte Rueckspulverlauf kann ohne Aenderung der Konfiguration
 manuell entfernt werden:
@@ -367,11 +373,11 @@ mit der technischen Version startet Build, Tests, GHCR-Push und die Erstellung
 des kleinen Installations-ZIPs:
 
 ```bash
-git tag v0.3.0-dev17
-git push origin v0.3.0-dev17
+git tag v0.3.0-dev18
+git push origin v0.3.0-dev18
 ```
 
-Das Multiarch-Image erhaelt die Tags `0.3.0-dev17` und `1.4-beta`. Beide
+Das Multiarch-Image erhaelt die Tags `0.3.0-dev18` und `1.4-beta`. Beide
 enthalten `linux/amd64` und `linux/arm64`. Nach dem ersten Lauf
 muss das Paket auf GitHub unter `Packages -> Package settings -> Change
 visibility` einmalig auf `Public` gestellt werden, damit der Installer ohne
@@ -422,7 +428,7 @@ Details zu Fremdkomponenten und Lizenzen stehen in
 
 ## Status
 
-Version 0.3.0-dev17 / NKL 1.4 Beta ist eine Entwicklungsvorschau. Der
+Version 0.3.0-dev18 / NKL 1.4 Beta ist eine Entwicklungsvorschau. Der
 offizielle Produktivcontainer bleibt unberuehrt. Vor einem breiten
 Produktiveinsatz werden ein mehrtaegiger Dauertest, Browserpruefungen und ein
 Wiederherstellungstest der Konfigurationssicherung empfohlen.

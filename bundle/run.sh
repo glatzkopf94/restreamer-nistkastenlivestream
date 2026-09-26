@@ -14,6 +14,10 @@ if [ -x /core/bin/migrate-timestamp-repair.py ]; then
     /core/bin/migrate-timestamp-repair.py || exit 1
 fi
 
+if [ -x /core/bin/migrate-dvr-retention.py ]; then
+    /core/bin/migrate-dvr-retention.py || exit 1
+fi
+
 if [ -x /core/bin/migrate-player-1.4.py ]; then
     /core/bin/migrate-player-1.4.py || exit 1
 fi

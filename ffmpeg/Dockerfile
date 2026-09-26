@@ -33,10 +33,11 @@ RUN patch -p1 --batch < /contrib/posix-ioctl.patch && \
       test -s libavformat/hlsenc.c.rej) && \
     patch -p1 --batch < /contrib/ffmpeg-9.0.1-compat.patch && \
     patch -p1 --batch < /contrib/ffmpeg-jsonstats-raw.patch && \
+    patch -p1 --batch < /contrib/nkl-hls-window-duration.patch && \
     find /build -type f -name '*.rej' -delete
 
 RUN ./configure \
-      --extra-version=nkl-restreamer-0.3.0-dev17 \
+      --extra-version=nkl-restreamer-0.3.0-dev18 \
       --prefix=/usr \
       --enable-gpl \
       --enable-version3 \

@@ -2030,6 +2030,9 @@ class Restreamer {
 			}
 		};
 		const hls_params_raw = getHLSParams(control.hls.version);
+		if (control.hls.dvr?.enabled) {
+			hls_params_raw.push(['hls_max_window_duration', String(control.hls.dvr.hours * 3600)]);
+		}
 
 		// 3.3 Use strftime for DiskFS
 		if (control.hls.storage && control.hls.storage === 'diskfs') {

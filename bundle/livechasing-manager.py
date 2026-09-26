@@ -13,6 +13,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 
 DB_FILE = Path(os.environ.get("CORE_DB_DIR", "/core/config")) / "db.json"
@@ -338,6 +339,68 @@ def process_control_requests(database: dict[str, Any], now: float | None = None)
     return processed
 
 
+def dvr_max_hours(database: dict[str, Any]) -> int:
+    try:
+        return min(168, max(1, int(system_settings(database).get("dvr", {}).get("maxHours", 4))))
+    except (AttributeError, TypeError, ValueError):
+        return 4
+
+
+def referenced_dvr_segments(channel_id: str) -> set[Path] | None:
+    """Return live playlist references, or None if cleanup cannot be proven safe."""
+    playlists = list(DATA_DIR.glob(f"{channel_id}_*.m3u8"))
+    playlists.append(DATA_DIR / f"{channel_id}.m3u8")
+    references: set[Path] = set()
+    media_playlists = 0
+    for playlist in playlists:
+        if not playlist.is_file() or playlist.is_symlink():
+            continue
+        try:
+            content = playlist.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            return None
+        if "#EXTINF:" not in content:
+            continue
+        media_playlists += 1
+        for line in content.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            uri = urlsplit(line).path.lstrip("/")
+            if not uri.startswith(channel_id + "/") or ".." in Path(uri).parts:
+                return None
+            references.add(DATA_DIR / uri)
+    return references if media_playlists else None
+
+
+def enforce_dvr_retention(database: dict[str, Any], last_check: float, now: float, wall_time: float | None = None) -> float:
+    if now - last_check < 60:
+        return last_check
+    cutoff = (time.time() if wall_time is None else wall_time) - dvr_max_hours(database) * 3600 - 60
+    removed = 0
+    for channel_id in dvr_channel_ids(database):
+        if CHANNEL_ID.fullmatch(channel_id) is None:
+            continue
+        root = DATA_DIR / channel_id
+        if not root.is_dir() or root.is_symlink():
+            continue
+        referenced = referenced_dvr_segments(channel_id)
+        if referenced is None:
+            continue
+        for path in root.rglob("*"):
+            if path.suffix not in {".ts", ".mp4"} or path.is_symlink() or not path.is_file():
+                continue
+            try:
+                if path not in referenced and path.stat().st_mtime < cutoff:
+                    path.unlink()
+                    removed += 1
+            except OSError as error:
+                log(f"DVR retention: could not remove old segment for {channel_id} ({type(error).__name__})")
+    if removed:
+        log(f"DVR retention removed {removed} unreferenced segments older than {dvr_max_hours(database)}h")
+    return now
+
+
 def enforce_disk_reserve(database: dict[str, Any], last_check: float, now: float) -> float:
     if now - last_check < 60:
         return last_check
@@ -385,6 +448,7 @@ def main() -> None:
     control_response_dir().mkdir(parents=True, exist_ok=True)
     overlay_state: dict[str, Any] = {}
     last_disk_check = 0.0
+    last_retention_check = 0.0
     log("started")
     while True:
         database = read_database()
@@ -393,6 +457,7 @@ def main() -> None:
         if processed:
             log(f"processed {processed} DVR cleanup request(s)")
         update_overlays(database, overlay_state, now)
+        last_retention_check = enforce_dvr_retention(database, last_retention_check, now)
         last_disk_check = enforce_disk_reserve(database, last_disk_check, now)
         time.sleep(2)
 

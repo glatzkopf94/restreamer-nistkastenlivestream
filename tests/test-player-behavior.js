@@ -24,23 +24,40 @@ function element() {
     clientWidth: 800,
   };
 }
-function makePlayer(dvr = false) {
+function makePlayer(dvr = false, legacyPage = false) {
   const gate = element();
   const message = element();
   const button = element();
+  const hint = element();
+  const bigPlayButton = {handleClick() {}};
   const holder = element();
   const progress = element();
   progress.querySelector = () => holder;
   const nodes = { 'lc-player-shell': element(), 'lc-playback-gate': gate, 'lc-playback-gate-message': message, 'lc-playback-gate-button': button };
-  const document = { getElementById: id => nodes[id], createElement: element, createDocumentFragment: element };
+  if (!legacyPage) nodes['lc-activation-hint'] = hint;
+  const document = {
+    getElementById: id => nodes[id],
+    createElement: () => {
+      if (!nodes['lc-activation-hint']) {
+        nodes['lc-activation-hint'] = hint;
+        return hint;
+      }
+      return element();
+    },
+    createDocumentFragment: element,
+  };
   const callbacks = {};
   let resets = 0;
+  let poster = '';
+  let sources = null;
+  const timers = new Map();
+  let timerId = 0;
   const player = {
-    el: () => element(), controlBar: { progressControl: { el: () => progress } },
+    el: () => element(), bigPlayButton, controlBar: { progressControl: { el: () => progress } },
     on(name, fn) { (callbacks[name] ||= []).push(fn); },
     emit(name) { for (const fn of callbacks[name] || []) fn(); },
     ready(fn) { fn(); }, license() {}, addClass() {},
-    pause() {}, reset() { resets++; }, poster() {}, error() {}, src() {},
+    pause() {}, reset() { resets++; }, poster(value) { poster = value; }, error() {}, src(value) { sources = value; },
     play() { return Promise.resolve(); },
     seekable: () => ({ length: 1, start: () => 0, end: () => 7200 }),
     tech: () => ({ vhs: { playlists: { media: () => ({ segments: [{dateTimeString: '2026-09-25T14:59:58Z', duration: 2}] }) } } }),
@@ -50,24 +67,39 @@ function makePlayer(dvr = false) {
     location: { search: '', origin: 'https://example.org' },
     navigator: { language: 'de' }, localStorage, BroadcastChannel: broadcast,
     crypto: { randomUUID: () => `token-${++nextClaim}` },
-    addEventListener() {}, removeEventListener() {}, setTimeout: () => 0, clearTimeout() {},
+    addEventListener() {}, removeEventListener() {}, setTimeout: fn => { timers.set(++timerId, fn); return timerId; }, clearTimeout: id => timers.delete(id),
   };
-  const config = { channelid: `channel-${nextClaim}`, autoplay: false, mute: false, statistics: false, color: {buttons:'#ffffff'}, source:'test.m3u8', poster:'poster.jpg', overlay: {enabled:false}, dvr: {enabled:dvr, segmentDuration: 2}, playback: {singleActiveStream:true} };
+  const config = { channelid: `channel-${nextClaim}`, autoplay: false, mute: false, statistics: false, color: {buttons:'#ffffff'}, source:'test.m3u8', poster:'poster.jpg', overlay: {enabled:false}, dvr: {enabled:dvr, segmentDuration: 2}, playback: {singleActiveStream:true, sessionLimitEnabled:true} };
   const context = {window, document, playerConfig: config, videojs: () => player, URL, Date, Math, Number, String, RegExp, Intl, BroadcastChannel: broadcast, fetch: () => { throw Error('VHS dateTime should be used'); }};
   vm.runInNewContext(script, context);
-  return {player, gate, message, holder, button, get resets() {return resets;}};
+  return {player, gate, hint, message, holder, button, timers, get poster() {return poster;}, get sources() {return sources;}, get resets() {return resets;}};
 }
-const first = makePlayer();
+const first = makePlayer(false, true); // Existing published page has no hint markup/CSS.
 const untouched = makePlayer();
 first.player.emit('playing');
 assert.equal(untouched.gate.classList.contains('is-visible'), false, 'untouched poster must remain visible');
 assert.equal(untouched.resets, 0);
 const third = makePlayer();
 third.player.emit('playing');
-assert.equal(first.gate.classList.contains('is-visible'), true, 'previously playing stream must display gate');
-assert.equal(first.message.textContent, 'Ein anderer Stream wurde aktiviert.');
+assert.equal(first.gate.classList.contains('is-visible'), false, 'single-player stop must not darken the poster');
+assert.equal(first.hint.classList.contains('is-visible'), true);
+assert.equal(first.hint.style.display, 'block');
+assert.equal(first.hint.textContent, 'Ein anderer Stream wurde aktiviert.');
+assert.ok(first.poster.includes('t='), 'poster must be loaded with a fresh URL');
+assert.equal(first.button.textContent, '', 'single-player stop must not offer another button');
 assert.equal(untouched.gate.classList.contains('is-visible'), false);
 assert.equal(untouched.resets, 0);
+first.player.bigPlayButton.handleClick();
+assert.equal(first.hint.classList.contains('is-visible'), false);
+assert.equal(first.hint.style.display, 'none');
+assert.ok(first.sources && first.sources.length, 'poster Play must restore the HLS source');
+
+const session = makePlayer();
+session.player.emit('playing');
+for (const callback of [...session.timers.values()]) callback();
+assert.equal(session.gate.classList.contains('is-visible'), true, '15-minute session must retain its gate');
+assert.equal(session.button.textContent, '▶ Weiter ansehen');
+assert.equal(session.message.textContent, '15 Minuten erreicht. Zum Weiterschauen erneut Play drücken.');
 
 const dvr = makePlayer(true);
 const marks = dvr.holder.children.find(child => child.className === 'lc-dvr-markers');
@@ -77,4 +109,4 @@ assert.ok(labels.includes('14:00'));
 const tooltip = dvr.holder.children.find(child => child.className === 'lc-dvr-clock-tooltip');
 dvr.holder.events.pointermove({clientX: 410});
 assert.equal(tooltip.textContent, '14:00', 'drag/hover must display clock time rather than -1:00');
-console.log('Player behavior: untouched poster, active gate, DVR ticks and clock tooltip OK');
+console.log('Player behavior: fresh poster hint, native Play, session gate, DVR ticks and clock tooltip OK');

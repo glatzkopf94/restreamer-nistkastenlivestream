@@ -1,6 +1,6 @@
-# Teststatus 0.3.0-dev17
+# Teststatus 0.3.0-dev18
 
-dev17 wird vor der Veroeffentlichung nativ auf `ubuntu-24.04` (AMD64) und
+dev18 wird vor der Veroeffentlichung nativ auf `ubuntu-24.04` (AMD64) und
 `ubuntu-24.04-arm` (ARM64) gebaut. Jeder Runner startet sein fertiges Image in
 isolierten Test-Volumes und fuehrt denselben Container-Smoke-Test aus. Der
 Release-Job prueft das gemeinsame Manifest auf beide Linux-Architekturen;
@@ -8,6 +8,14 @@ erst danach werden ZIP und Release veroeffentlicht. Ein zusaetzlicher Test
 verhindert, dass ein Manifest mit nur einer Architektur als gueltig gilt.
 
 ## Erfolgreich ausgefuehrt
+
+- Drei neue DVR-Regressionstests fuer gespeicherte Prozesse als Core-Liste,
+  HLS- und Tee-Ausgaben, idempotente Migration sowie sichere Ablaufbereinigung
+  mehrerer Kanaele. Ein Player-Lauf prueft frisches Poster, normalen Play-Knopf,
+  Hinweis ohne Abdunkelung und das unveraenderte 15-Minuten-Dialogfeld.
+- Der native Container-Smoke-Test erzeugt 6-Sekunden-HLS-Segmente bei einer
+  2-Sekunden-Zielgroesse und prueft die Begrenzung auf 12 Sekunden tatsaechliche
+  Playlistdauer auf AMD64 und ARM64.
 
 - optimierter React-Produktionsbuild
 - Lingui-Extraktion und Kompilierung aller Sprachkataloge

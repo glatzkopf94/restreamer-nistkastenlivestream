@@ -1831,7 +1831,7 @@ export default function Settings({ restreamer = null }) {
 										onChange={handleDVRChange('maxHours')}
 									/>
 									<Typography variant="caption">
-										<Trans>Allowed range: 1 to 168 hours. New values are applied when a channel is saved.</Trans>
+										<Trans>Allowed range: 1 to 168 hours. New values apply to all DVR channels after restarting the application.</Trans>
 									</Typography>
 								</Grid>
 								<Grid item xs={12} md={6}>

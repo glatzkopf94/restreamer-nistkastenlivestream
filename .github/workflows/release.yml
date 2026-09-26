@@ -59,13 +59,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 tests/test-livechasing-manager.py
+          python3 tests/test-dvr-retention.py
           python3 tests/test-player-ui.py
           node tests/test-player-behavior.js
           python3 -m py_compile scripts/migrate-player-1.4.py
           python3 tests/test-timestamp-repair.py
           python3 tests/test-update-agent.py
           python3 tests/test-release-architecture.py
-          python3 -m py_compile scripts/migrate-timestamp-repair.py scripts/verify-multiarch-manifest.py
+          python3 -m py_compile scripts/migrate-timestamp-repair.py scripts/migrate-dvr-retention.py scripts/verify-multiarch-manifest.py
           ./scripts/check-release.sh
           sh -n install.sh build-local.sh status.sh uninstall.sh bundle/run.sh tests/smoke-test.sh scripts/package-release.sh scripts/check-release.sh scripts/nkl-update-agent.sh
 

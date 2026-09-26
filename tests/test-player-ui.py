@@ -3,6 +3,7 @@
 
 from pathlib import Path
 import importlib.util
+import re
 import tempfile
 import unittest
 
@@ -29,7 +30,9 @@ class PlayerUITest(unittest.TestCase):
             (data / "player/videojs/dist/video-js-skin.min.css").write_text("old skin")
             old = PLAYER.read_text().replace("NKL 1.4 Beta", "NKL 1.3 Beta")
             old = old.replace("var publicStreamActivated = false;", "var oldPlayerCode = true;")
-            old = old.replace("?nkl=1.4-beta-dev17", "")
+            old = old.replace("?nkl=1.4-beta-dev18", "")
+            old = re.sub(r"\s*#lc-activation-hint\s*\{.*?\}\s*#lc-activation-hint\.is-visible\s*\{.*?\}", "", old, flags=re.S)
+            old = old.replace('<div id="lc-activation-hint" aria-live="polite"></div>', "")
             old = old.replace("{{name}}", "Unchanged channel &amp; title")
             channel = data / "f74edb08-dfb3-44f5-9873-1afe0699c846.html"
             channel.write_text(old)
@@ -39,8 +42,10 @@ class PlayerUITest(unittest.TestCase):
             result = channel.read_text()
             self.assertIn("Unchanged channel &amp; title", result)
             self.assertIn("var publicStreamActivated = false;", result)
+            self.assertIn("document.createElement('div')", result)
+            self.assertNotIn('<div id="lc-activation-hint"', result)
             self.assertNotIn("var oldPlayerCode = true;", result)
-            self.assertIn("video-js-skin.min.css?nkl=1.4-beta-dev17", result)
+            self.assertIn("video-js-skin.min.css?nkl=1.4-beta-dev18", result)
             self.assertEqual(custom.read_text(), "<html>Custom page</html>")
             self.assertEqual((data / "player/videojs/dist/video-js-skin.min.css").read_text(), "new skin")
             migration.migrate(data, ui)

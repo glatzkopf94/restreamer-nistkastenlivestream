@@ -39,6 +39,9 @@ grep -Fq 'api.github.com/repos/glatzkopf94/restreamer-nistkastenlivestream/relea
     fail "UI prueft nicht das NKL-GitHub-Repository"
 test -x scripts/nkl-update-agent.sh || fail "Host-Update-Agent ist nicht ausfuehrbar"
 test -x scripts/migrate-timestamp-repair.py || fail "Timestamp-Migration ist nicht ausfuehrbar"
+test -x scripts/migrate-dvr-retention.py || fail "DVR-Migration ist nicht ausfuehrbar"
+grep -Fq 'nkl-hls-window-duration.patch' ffmpeg/Dockerfile || fail "FFmpeg-DVR-Zeitfenster fehlt"
+grep -Fq 'migrate-dvr-retention.py' bundle/run.sh || fail "DVR-Startmigration fehlt"
 grep -Fq 'fps=fps=${fps}:start_time=0:round=near' ui/src/misc/filters/video/Timestamps.js || \
     fail "zeitbasierte CFR-Reparatur fehlt"
 grep -Fq 'migrate-timestamp-repair.py' bundle/run.sh || \
