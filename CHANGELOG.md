@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0-dev17 – 2026-09-26 (NKL 1.4 Beta)
+
+- Doppelte LIVE-Anzeige ohne DVR entfernt; der rechte Video.js-Schalter mit
+  rotem Punkt bleibt sichtbar und bedienbar.
+- Funktionsloses Lizenz-Zahnrad und leeres Popup im oeffentlichen Player
+  deaktiviert.
+- Installer bindet die Update-Ueberwachung an das tatsaechliche NKL-Datenvolume
+  und startet einen bereits aktiven systemd-Pfad nach Konfigurationswechsel neu.
+  Der Agent stoppt mit `instance-mismatch`, wenn Compose-Projekt und Datenvolume
+  nicht zusammenpassen.
+- Bestehende veroeffentlichte NKL-Playerseiten erhalten die Korrekturen beim
+  Start, ohne Konfiguration und DVR-Aufnahmen zu veraendern.
+
 ## 0.3.0-dev16 – 2026-09-25 (NKL 1.4 Beta)
 
 - Bei parallelen eingebetteten Playern wird die Aktivierungsmeldung nur noch

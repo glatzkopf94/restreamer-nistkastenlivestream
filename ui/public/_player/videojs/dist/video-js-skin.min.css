@@ -92,31 +92,9 @@
     line-height: 50px;
 }
 
-/* Non-DVR streams keep a compact, reddish LIVE marker. */
-
+/* Only the native seek-to-live control should display LIVE. */
 .vjs-public.vjs-live-no-dvr .vjs-live-control {
-    box-sizing: border-box;
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-    height: 30px;
-    min-width: 4.5em;
-    margin-top: 10px;
-    padding: 0 .8em;
-    border: 1px solid rgba(255,105,105,.85);
-    border-radius: 4px;
-    background: rgba(120,0,0,.48);
-    color: #ffadad;
-    font-weight: 700;
-    line-height: 1;
-    white-space: nowrap;
-}
-
-.vjs-public.vjs-live-no-dvr .vjs-live-display {
-    margin: 0;
-    width: auto;
-    line-height: 1;
+	display: none;
 }
 
 /* Wall-clock marks sit above the DVR seekbar and never intercept seeking. */

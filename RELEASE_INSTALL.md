@@ -1,7 +1,7 @@
 # NKL Restreamer installieren
 
 Dieses Installationspaket laedt das fertig gebaute AMD64-/ARM64-Docker-Image
-`ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev16`.
+`ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev17`.
 FFmpeg, Core und UI werden auf dem Zielserver nicht mehr kompiliert.
 
 ## Installation oder Update
@@ -9,8 +9,8 @@ FFmpeg, Core und UI werden auf dem Zielserver nicht mehr kompiliert.
 Als `root` ausfuehren:
 
 ```bash
-unzip -o restreamer-nistkastenlivestream-0.3.0-dev16.zip
-cd restreamer-nistkastenlivestream-0.3.0-dev16
+unzip -o restreamer-nistkastenlivestream-0.3.0-dev17.zip
+cd restreamer-nistkastenlivestream-0.3.0-dev17
 chmod 0755 install.sh status.sh uninstall.sh tests/smoke-test.sh
 ./install.sh
 ```

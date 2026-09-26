@@ -44,6 +44,24 @@ class UpdateAgentReleaseParsingTests(unittest.TestCase):
             "0.3.0-dev14",
         )
 
+    def test_installer_rearms_path_on_the_active_data_volume(self) -> None:
+        installer = (ROOT / "install.sh").read_text(encoding="utf-8")
+        service = (ROOT / "systemd/nkl-restreamer-update.service.in").read_text(encoding="utf-8")
+        path = (ROOT / "systemd/nkl-restreamer-update.path.in").read_text(encoding="utf-8")
+        self.assertIn('docker compose -f compose.yaml ps -q restreamer-nkl', installer)
+        self.assertIn('!= "$data_volume"', installer)
+        self.assertIn('systemctl stop nkl-restreamer-update.path', installer)
+        self.assertIn('systemctl enable --now nkl-restreamer-update.path', installer)
+        self.assertIn('systemctl is-active --quiet nkl-restreamer-update.path', installer)
+        self.assertIn('"@PROJECT_DIR@" "@DATA_DIR@"', service)
+        self.assertIn('@DATA_DIR@/nkl-update/requests/*.json', path)
+
+    def test_agent_rejects_stale_or_mismatched_compose_binding(self) -> None:
+        agent = AGENT.read_text(encoding="utf-8")
+        self.assertIn('failure_code="instance-mismatch"', agent)
+        self.assertIn('"$(docker volume inspect "$data_volume" --format', agent)
+        self.assertIn('"$data_dir"', agent)
+
 
 if __name__ == "__main__":
     unittest.main()

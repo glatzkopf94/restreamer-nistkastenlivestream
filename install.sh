@@ -223,6 +223,12 @@ install_update_agent() {
     fi
 
     data_mount="$(docker volume inspect "$data_volume" --format '{{ .Mountpoint }}')"
+    installed_container="$(docker compose -f compose.yaml ps -q restreamer-nkl)"
+    if [ -z "$installed_container" ] || \
+       [ "$(docker inspect "$installed_container" --format '{{range .Mounts}}{{if eq .Destination "/core/data"}}{{.Name}}{{end}}{{end}}')" != "$data_volume" ]; then
+        echo "Abbruch: Der laufende Compose-Container verwendet nicht das konfigurierte NKL-Datenvolume." >&2
+        return 1
+    fi
     for safe_path in "$project_dir" "$data_mount"; do
         case "$safe_path" in
             ''|*[!A-Za-z0-9_./-]*)
@@ -251,8 +257,12 @@ install_update_agent() {
     install -m 0644 "$path_tmp" /etc/systemd/system/nkl-restreamer-update.path
     rm -f "$service_tmp" "$path_tmp"
 
+    # A running path unit retains the old watch directory across daemon-reload.
+    # Restart it when an earlier installation watched another NKL volume.
     systemctl daemon-reload
+    systemctl stop nkl-restreamer-update.path
     systemctl enable --now nkl-restreamer-update.path
+    systemctl is-active --quiet nkl-restreamer-update.path
     printf '{"available":true,"protocol":1,"repository":"glatzkopf94/restreamer-nistkastenlivestream"}\n' > "$update_root/agent.json"
     chmod 0644 "$update_root/agent.json"
     echo "Sichere Aktualisierung aus dem NKL-Webinterface ist aktiviert."

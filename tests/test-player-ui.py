@@ -29,7 +29,7 @@ class PlayerUITest(unittest.TestCase):
             (data / "player/videojs/dist/video-js-skin.min.css").write_text("old skin")
             old = PLAYER.read_text().replace("NKL 1.4 Beta", "NKL 1.3 Beta")
             old = old.replace("var publicStreamActivated = false;", "var oldPlayerCode = true;")
-            old = old.replace("?nkl=1.4-beta", "")
+            old = old.replace("?nkl=1.4-beta-dev17", "")
             old = old.replace("{{name}}", "Unchanged channel &amp; title")
             channel = data / "f74edb08-dfb3-44f5-9873-1afe0699c846.html"
             channel.write_text(old)
@@ -40,7 +40,7 @@ class PlayerUITest(unittest.TestCase):
             self.assertIn("Unchanged channel &amp; title", result)
             self.assertIn("var publicStreamActivated = false;", result)
             self.assertNotIn("var oldPlayerCode = true;", result)
-            self.assertIn("video-js-skin.min.css?nkl=1.4-beta", result)
+            self.assertIn("video-js-skin.min.css?nkl=1.4-beta-dev17", result)
             self.assertEqual(custom.read_text(), "<html>Custom page</html>")
             self.assertEqual((data / "player/videojs/dist/video-js-skin.min.css").read_text(), "new skin")
             migration.migrate(data, ui)
@@ -65,13 +65,22 @@ class PlayerUITest(unittest.TestCase):
         self.assertIn("vjs-seek-to-live-control", minified)
         self.assertIn("vjs-at-live-edge", minified)
 
-    def test_non_dvr_live_marker_is_reddish(self):
+    def test_non_dvr_shows_only_seek_to_live_control(self):
         html = PLAYER.read_text(encoding="utf-8")
         css = SKIN.read_text(encoding="utf-8")
+        minified = MINIFIED_SKIN.read_text(encoding="utf-8")
 
         self.assertIn("player.addClass('vjs-live-no-dvr')", html)
         self.assertIn(".vjs-public.vjs-live-no-dvr .vjs-live-control", css)
-        self.assertIn("color: #ffadad", css)
+        self.assertIn(".vjs-public.vjs-live-no-dvr .vjs-live-control {\n\tdisplay: none;", css)
+        self.assertEqual(css, minified)
+        self.assertIn(".vjs-public .vjs-seek-to-live-control.vjs-at-live-edge::after", css)
+
+    def test_empty_license_settings_menu_is_not_initialized(self):
+        html = PLAYER.read_text(encoding="utf-8")
+        self.assertNotIn("player.license(playerConfig.license)", html)
+        self.assertNotIn("videojs-license.min.js", html)
+        self.assertNotIn("videojs-license.min.css", html)
 
     def test_passthrough_overlay_uses_safe_player_elements(self):
         html = PLAYER.read_text(encoding="utf-8")

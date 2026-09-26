@@ -155,6 +155,15 @@ docker pull "$image_repository:$latest_version"
 
 config_volume="$(sed -n 's/^RESTREAMER_CONFIG_VOLUME=//p' "$project_dir/.env" | tail -n 1)"
 config_volume="${config_volume:-restreamer-nkl-config}"
+data_volume="$(sed -n 's/^RESTREAMER_DATA_VOLUME=//p' "$project_dir/.env" | tail -n 1)"
+data_volume="${data_volume:-restreamer-nkl-data}"
+container_id="$(docker compose -f "$project_dir/compose.yaml" --project-directory "$project_dir" ps -q restreamer-nkl)"
+if [ -z "$container_id" ] || \
+   [ "$(docker inspect "$container_id" --format '{{range .Mounts}}{{if eq .Destination "/core/data"}}{{.Name}}{{end}}{{end}}')" != "$data_volume" ] || \
+   [ "$(docker volume inspect "$data_volume" --format '{{ .Mountpoint }}')" != "$data_dir" ]; then
+    failure_code="instance-mismatch"
+    exit 1
+fi
 config_mount="$(docker volume inspect "$config_volume" --format '{{ .Mountpoint }}')"
 if [ -z "$config_mount" ] || [ ! -d "$config_mount" ]; then
     failure_code="config-volume-not-found"
