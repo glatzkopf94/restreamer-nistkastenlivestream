@@ -1,4 +1,4 @@
-# Teststatus 0.3.0-dev19
+# Teststatus 0.3.0-dev20
 
 dev19 wird vor der Veroeffentlichung nativ auf `ubuntu-24.04` (AMD64) und
 `ubuntu-24.04-arm` (ARM64) gebaut. Jeder Runner startet sein fertiges Image in
@@ -102,3 +102,5 @@ laufen automatisch waehrend des Core-Container-Builds.
 Vor einer Freigabe als stabile Version sind der reale Container-Smoke-Test,
 ein mehrtaegiger Kameradauertest sowie DVR-Tests mit mehreren Browsern
 vorgesehen.
+
+Dev20: `tests/test-player-ui.py` prueft den wiederholten Startabgleich mehrerer persistierter DVR-Player inklusive unveraenderter Poster/Overlays. `tests/test-player-browser.cjs` prueft echte HLS-Wiedergabe nach HTTP 503 waehrend eines Neustarts und das Abbrechen ausstehender Wiederverbindungen beim Playerwechsel.

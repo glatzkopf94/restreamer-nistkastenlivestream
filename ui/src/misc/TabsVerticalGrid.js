@@ -11,11 +11,11 @@ const useStyles = makeStyles((theme) => ({
 	},
 }));
 
-export default function Component({ children = null }) {
+export default function Component({ children = null, className = '' }) {
 	const classes = useStyles();
 
 	return (
-		<Grid item xs={12} className={classes.grid}>
+		<Grid item xs={12} className={`${classes.grid} ${className}`}>
 			{children}
 		</Grid>
 	);

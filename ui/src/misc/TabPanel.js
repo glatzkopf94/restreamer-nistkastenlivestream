@@ -7,6 +7,10 @@ import PropTypes from 'prop-types';
 const useStyles = makeStyles((theme) => ({
 	root: {
 		padding: 0,
+		minWidth: 0,
+		flex: '1 1 0%',
+		maxWidth: '100%',
+		overflowWrap: 'anywhere',
 	},
 	'& .MuiBox-root': {
 		padding: 0,

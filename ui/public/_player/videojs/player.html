@@ -162,24 +162,24 @@
 			href="channels/{{channelid}}/oembed.xml"
 			title="{{name}}"
 		/>
-		<script src="channels/{{channelid}}/config.js?nkl=1.4-beta-dev19"></script>
-		<link href="player/videojs/dist/video-js.min.css?nkl=1.4-beta-dev19" rel="stylesheet" />
+		<script src="channels/{{channelid}}/config.js?nkl=1.4-beta-dev20"></script>
+		<link href="player/videojs/dist/video-js.min.css?nkl=1.4-beta-dev20" rel="stylesheet" />
 		<link
-			href="player/videojs/dist/video-js-skin.min.css?nkl=1.4-beta-dev19"
+			href="player/videojs/dist/video-js-skin.min.css?nkl=1.4-beta-dev20"
 			rel="stylesheet"
 		/>
 		<link
-			href="player/videojs/dist/videojs-overlay.min.css?nkl=1.4-beta-dev19"
+			href="player/videojs/dist/videojs-overlay.min.css?nkl=1.4-beta-dev20"
 			rel="stylesheet"
 		/>
 		{{#if airplay}}
 		<link
-			href="player/videojs/dist/videojs-airplay.min.css?nkl=1.4-beta-dev19"
+			href="player/videojs/dist/videojs-airplay.min.css?nkl=1.4-beta-dev20"
 			rel="stylesheet"
 		/>
 		{{/if}} {{#if chromecast}}
 		<link
-			href="player/videojs/dist/videojs-chromecast.min.css?nkl=1.4-beta-dev19"
+			href="player/videojs/dist/videojs-chromecast.min.css?nkl=1.4-beta-dev20"
 			rel="stylesheet"
 		/>
 		{{/if}}
@@ -205,12 +205,12 @@
 				</div>
 			</div>
 		</div>
-		<script src="player/videojs/dist/video.min.js?nkl=1.4-beta-dev19"></script>
-		<script src="player/videojs/dist/videojs-overlay.min.js?nkl=1.4-beta-dev19"></script>
+		<script src="player/videojs/dist/video.min.js?nkl=1.4-beta-dev20"></script>
+		<script src="player/videojs/dist/videojs-overlay.min.js?nkl=1.4-beta-dev20"></script>
 		{{#if airplay}}
-		<script src="player/videojs/dist/videojs-airplay.min.js?nkl=1.4-beta-dev19"></script>
+		<script src="player/videojs/dist/videojs-airplay.min.js?nkl=1.4-beta-dev20"></script>
 		{{/if}} {{#if chromecast}}
-		<script src="player/videojs/dist/videojs-chromecast.min.js?nkl=1.4-beta-dev19"></script>
+		<script src="player/videojs/dist/videojs-chromecast.min.js?nkl=1.4-beta-dev20"></script>
 		<script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 		{{/if}}
 		<script>
@@ -315,7 +315,7 @@
 				responsive: true,
 				fluid: true,
 				aspectRatio: playerAspectRatio,
-				preload: 'metadata',
+				preload: 'none',
 				sources: [
 					{
 						src: publicSourceURL.toString(),
@@ -412,6 +412,8 @@
 			};
 
 			var deactivatePublicStream = function (reason) {
+				cancelSourceRetry();
+				sourceRetryCount = 0;
 				if (playbackGateReason === 'session' && reason !== 'session')
 					return;
 				if (
@@ -537,6 +539,41 @@
 					deactivatePublicStream('session');
 				}, playbackRemainingMilliseconds);
 			};
+
+			// A container restart can temporarily remove the manifest. Recover only
+			// explicitly activated players; idle posters must not start fetching.
+			var sourceRetryTimer = null;
+			var sourceRetryCount = 0;
+			var cancelSourceRetry = function () {
+				if (sourceRetryTimer !== null) window.clearTimeout(sourceRetryTimer);
+				sourceRetryTimer = null;
+			};
+			player.on('play', function () {
+				if (playbackGateReason) return;
+				publicStreamActivated = true;
+				claimPublicStream();
+			});
+			player.on('error', function () {
+				var error = player.error();
+				if (!error || [2, 4].indexOf(error.code) === -1 ||
+					!publicStreamActivated || playbackGateReason ||
+					sourceRetryTimer !== null || sourceRetryCount >= 12) return;
+				sourceRetryCount++;
+				sourceRetryTimer = window.setTimeout(function () {
+					sourceRetryTimer = null;
+					if (!publicStreamActivated || playbackGateReason) return;
+					player.error(null);
+					player.src(publicPlayerSources);
+					var promise = player.play();
+					if (promise && promise.catch) promise.catch(function () {});
+				}, 5000);
+			});
+			player.on('playing', function () {
+				cancelSourceRetry();
+				sourceRetryCount = 0;
+			});
+			player.on('dispose', cancelSourceRetry);
+			window.addEventListener('pagehide', cancelSourceRetry);
 
 			var activatePublicStream = function () {
 				if (playbackActivationPending) return;

@@ -1,4 +1,5 @@
 import React from 'react';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useNavigate } from 'react-router-dom';
 
 import { useLingui } from '@lingui/react';
@@ -35,6 +36,18 @@ import TabsVerticalGrid from '../misc/TabsVerticalGrid';
 import UploadButton from '../misc/UploadButton';
 
 const useStyles = makeStyles((theme) => ({
+	settingsLayout: {
+		minWidth: 0,
+		'& .MuiGrid-item': { minWidth: 0 },
+		'& .MuiFormControl-root': { maxWidth: '100%' },
+		'& .MuiSelect-select': { whiteSpace: 'normal', overflowWrap: 'anywhere' },
+		'& .MuiButton-root': { maxWidth: '100%', whiteSpace: 'normal', overflowWrap: 'anywhere' },
+		[theme.breakpoints.down('md')]: {
+			flexDirection: 'column',
+			'& > .MuiTabs-root': { width: '100%', minWidth: 0, paddingTop: 0 },
+			'& > [role="tabpanel"]': { width: '100%', flex: 'none' },
+		},
+	},
 	buttonOpen: {
 		float: 'right',
 		marginLeft: '.5em',
@@ -52,6 +65,7 @@ const templateTypes = [{ mimetype: 'text/html', extension: 'html', maxSize: 500 
 
 export default function Playersite({ restreamer = null }) {
 	const classes = useStyles();
+	const compact = useMediaQuery((theme) => theme.breakpoints.down('md'));
 	const navigate = useNavigate();
 	const { i18n } = useLingui();
 	const address = restreamer.Address() + '/';
@@ -262,8 +276,8 @@ export default function Playersite({ restreamer = null }) {
 			<Paper xs={12} md={10}>
 				<PaperHeader title={<Trans>EDIT: Publication Website</Trans>} onAbort={handleAbort} onHelp={handleHelp} />
 				<Grid container spacing={2}>
-					<TabsVerticalGrid>
-						<Tabs orientation="vertical" variant="scrollable" value={$tab} onChange={handleChangeTab} className="tabs">
+					<TabsVerticalGrid className={classes.settingsLayout}>
+						<Tabs orientation={compact ? 'horizontal' : 'vertical'} variant="scrollable" value={$tab} onChange={handleChangeTab} className="tabs">
 							<Tab className="tab" label={<Trans>General</Trans>} value="general" />
 							<Tab className="tab" label={<Trans>Template</Trans>} value="template" disabled={!$settings.playersite} />
 							<Tab className="tab" label={<Trans>Design</Trans>} value="design" disabled={!$settings.playersite} />

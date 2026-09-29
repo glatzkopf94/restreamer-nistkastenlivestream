@@ -74,8 +74,11 @@ class DVRRetentionTests(unittest.TestCase):
             self.assertEqual(result["process"]["restreamer-ui:ingest:" + IDS[0]]["config"]["output"][0]["options"][-2:],
                              ["-hls_max_window_duration", "10800"])
             self.assertIn("hls_max_window_duration=10800", result["process"]["restreamer-ui:ingest:" + IDS[1]]["config"]["output"][0]["address"])
+            for channel in IDS:
+                output = result["process"]["restreamer-ui:ingest:" + channel]["config"]["output"][0]
+                self.assertIn("discont_start", str(output))
             self.assertEqual(MIGRATE.migrate_file(db_path), 0)
-            self.assertEqual(len(list(Path(directory).glob("db.pre-dev19-*.json"))), 1)
+            self.assertEqual(len(list(Path(directory).glob("db.pre-dev20-*.json"))), 1)
 
     def test_expired_unreferenced_segments_are_deleted_for_every_dvr_channel(self):
         wall = 1_800_000_000

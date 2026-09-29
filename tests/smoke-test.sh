@@ -84,9 +84,10 @@ docker exec -i "$container" sh -ec '
     ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc2=size=160x90:rate=5 \
       -t 12 -c:v libx264 -preset ultrafast -g 30 -keyint_min 30 -sc_threshold 0 \
       -f hls -hls_time 2 -hls_list_size 100 -hls_max_window_duration 12 \
-      -hls_flags append_list+delete_segments \
+      -hls_flags append_list+delete_segments+discont_start \
       -hls_segment_filename /tmp/nkl-dvr-window-smoke/seg%03d.ts \
       /tmp/nkl-dvr-window-smoke/stream.m3u8
+    ffmpeg -hide_banner -loglevel error -i /tmp/nkl-dvr-window-smoke/stream.m3u8 -map 0:v:0 -f null -
     python3 - <<"PY"
 from pathlib import Path
 import re

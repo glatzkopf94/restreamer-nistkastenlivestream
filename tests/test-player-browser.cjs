@@ -14,6 +14,7 @@ execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i
   '-g', '30', '-sc_threshold', '0', '-f', 'hls', '-hls_time', '2', '-hls_list_size', '0',
   path.join(media, 'stream.m3u8')]);
 const template = fs.readFileSync(path.join(root, 'ui/public/_player/videojs/player.html'), 'utf8');
+let restarting = false;
 const server = http.createServer((req, res) => {
   const p = new URL(req.url, 'http://localhost').pathname;
   res.setHeader('Cache-Control', 'no-store');
@@ -30,12 +31,13 @@ const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'application/javascript');
     return res.end('var playerConfig=' + JSON.stringify({channelid:p.split('/')[2], source:'stream.m3u8',
       poster:'/poster.svg', autoplay:false, mute:true, color:{buttons:'#fff'}, overlay:{enabled:false},
-      dvr:{enabled:false}, playback:{singleActiveStream:true, sessionLimitEnabled:true}}));
+      dvr:{enabled:true, hours:3, segmentDuration:2}, playback:{singleActiveStream:true, sessionLimitEnabled:true}}));
   }
   if (p === '/poster.svg') {
     res.setHeader('Content-Type', 'image/svg+xml');
     return res.end('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#497d49"/></svg>');
   }
+  if (restarting && p.endsWith('.m3u8')) {res.statusCode=503; return res.end('Restarting');}
   const file = p.startsWith('/player/videojs/')
     ? path.join(root, 'ui/public/_player/videojs', p.slice('/player/videojs/'.length))
     : path.join(media, path.basename(p));
@@ -66,6 +68,18 @@ const server = http.createServer((req, res) => {
         assert.equal(await c.evaluate(() => player.hasStarted()), false);
       }
     }
+    // A manifest unavailable while Core/FFmpeg restarts must recover without
+    // saving/reloading the generated page. Exercise real VHS HTTP failures.
+    restarting = true;
+    await a.locator('.vjs-big-play-button').click();
+    await a.waitForFunction(() => sourceRetryCount > 0, {timeout:30000});
+    restarting = false;
+    await a.waitForFunction(() => !player.paused() && player.currentTime()>0 && !player.error(), {timeout:30000});
+    // Deactivation while a retry is pending must never resume the old stream.
+    await a.evaluate(() => player.error({code:2, message:'Temporary network interruption'}));
+    await b.locator('.vjs-big-play-button').click();
+    await b.waitForFunction(() => !player.paused() && player.currentTime()>0);
+    await a.waitForFunction(() => sourceRetryTimer === null && !publicStreamActivated);
     // Poster clicks use a separate native Video.js component from BigPlayButton.
     await a.locator('.vjs-poster').first().click({position:{x:20,y:20}});
     await a.waitForFunction(() => !player.paused() && player.currentTime()>0);
@@ -75,7 +89,7 @@ const server = http.createServer((req, res) => {
     await a.locator('#lc-playback-gate-button').click();
     await a.waitForFunction(() => !player.paused() && player.currentTime()>0 && !player.error());
     assert.deepEqual(errors, []);
-    console.log('Chromium: repeated real HLS reactivation, native Play/poster, untouched third player and session gate passed');
+    console.log('Chromium: repeated real HLS reactivation, native Play/poster, restart recovery, untouched third player and session gate passed');
   } finally {
     if (browser) await browser.close();
     server.close();

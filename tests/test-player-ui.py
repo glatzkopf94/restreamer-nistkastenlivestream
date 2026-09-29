@@ -3,6 +3,7 @@
 
 from pathlib import Path
 import importlib.util
+import json
 import re
 import tempfile
 import unittest
@@ -30,7 +31,7 @@ class PlayerUITest(unittest.TestCase):
             (data / "player/videojs/dist/video-js-skin.min.css").write_text("old skin")
             old = PLAYER.read_text().replace("NKL 1.4 Beta", "NKL 1.3 Beta")
             old = old.replace("var publicStreamActivated = false;", "var oldPlayerCode = true;")
-            old = old.replace("?nkl=1.4-beta-dev19", "")
+            old = old.replace("?nkl=1.4-beta-dev20", "")
             old = re.sub(r"\s*#lc-activation-hint\s*\{.*?\}\s*#lc-activation-hint\.is-visible\s*\{.*?\}", "", old, flags=re.S)
             old = old.replace('<div id="lc-activation-hint" aria-live="polite"></div>', "")
             old = old.replace("{{name}}", "Unchanged channel &amp; title")
@@ -45,11 +46,43 @@ class PlayerUITest(unittest.TestCase):
             self.assertIn("document.createElement('div')", result)
             self.assertNotIn('<div id="lc-activation-hint"', result)
             self.assertNotIn("var oldPlayerCode = true;", result)
-            self.assertIn("video-js-skin.min.css?nkl=1.4-beta-dev19", result)
+            self.assertIn("video-js-skin.min.css?nkl=1.4-beta-dev20", result)
             self.assertEqual(custom.read_text(), "<html>Custom page</html>")
             self.assertEqual((data / "player/videojs/dist/video-js-skin.min.css").read_text(), "new skin")
             migration.migrate(data, ui)
             self.assertEqual(channel.read_text(), result)
+
+    def test_restart_refreshes_dvr_sources_without_resaving_player(self):
+        spec = importlib.util.spec_from_file_location("player_migration", ROOT / "scripts/migrate-player-1.4.py")
+        migration = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(migration)
+        with tempfile.TemporaryDirectory() as directory:
+            data = Path(directory)
+            ids = ["f74edb08-dfb3-44f5-9873-1afe0699c846", "2579719c-8d8b-4f59-a936-3048b181710b"]
+            db = {"process": {}, "metadata": {"process": {}}}
+            for channel in ids:
+                key = "restreamer-ui:ingest:" + channel
+                db["process"][key] = {"config": {"output": [{"address": "{diskfs}/" + channel + "_output_0.m3u8"}]}}
+                db["metadata"]["process"][key] = {"restreamer-ui": {"control": {
+                    "hls": {"storage": "diskfs", "segmentDuration": 2, "dvr": {"enabled": True, "hours": 3}},
+                    "preview": {"enable": True}}}}
+                path = data / "channels" / channel / "config.js"
+                path.parent.mkdir(parents=True)
+                path.write_text('var playerConfig = ' + json.dumps({"source": "memfs/" + channel + "_h264.m3u8", "poster": "custom.jpg", "overlay": {"enabled": True}, "dvr": {"enabled": False}}))
+            database = data / "db.json"
+            database.write_text(json.dumps(db))
+            migration.synchronize_player_configs(data, database)
+            for channel in ids:
+                path = data / "channels" / channel / "config.js"
+                content = path.read_text()
+                config = json.loads(content.split("=", 1)[1].strip().rstrip(";"))
+                self.assertEqual(config["source"], channel + ".m3u8")
+                self.assertEqual(config["dvr"], {"enabled": True, "hours": 3, "segmentDuration": 2})
+                self.assertEqual(config["poster"], "custom.jpg")
+                self.assertTrue(config["overlay"]["enabled"])
+                migration.synchronize_player_configs(data, database)
+                self.assertEqual(path.read_text(), content)
+            self.assertEqual(json.loads(database.read_text()), db)
 
     def test_duplicate_dvr_panel_is_removed(self):
         html = PLAYER.read_text(encoding="utf-8")

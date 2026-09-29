@@ -62,6 +62,16 @@ def migrate_data(database):
             if index + 1 >= len(options):
                 continue
             options[index + 1] = str(count)
+            # Legacy DVR processes may predate the restart boundary flag.
+            # Mark timestamp resets when appending after an encoder restart.
+            if "-hls_flags" in options:
+                flag_index = options.index("-hls_flags") + 1
+                if flag_index >= len(options):
+                    continue
+                if "discont_start" not in options[flag_index].split("+"):
+                    options[flag_index] += "+discont_start"
+            else:
+                options.extend(["-hls_flags", "append_list+program_date_time+delete_segments+discont_start"])
             if "-hls_max_window_duration" in options:
                 index = options.index("-hls_max_window_duration")
                 if index + 1 >= len(options):
@@ -74,6 +84,12 @@ def migrate_data(database):
             if not separator:
                 continue
             head = re.sub(r"hls_list_size=\d+", f"hls_list_size={count}", head, count=1)
+            flags = re.search(r"(?:^|:)hls_flags=([^:]+)", head)
+            if flags:
+                if "discont_start" not in flags.group(1).split("+"):
+                    head = head[:flags.end(1)] + "+discont_start" + head[flags.end(1):]
+            else:
+                head += ":hls_flags=append_list+program_date_time+delete_segments+discont_start"
             if "hls_max_window_duration=" in head:
                 head = re.sub(r"hls_max_window_duration=\d+", f"hls_max_window_duration={duration}", head, count=1)
             else:
@@ -100,10 +116,10 @@ def migrate_file(path):
     updated = json.dumps(database, ensure_ascii=False, separators=(",", ":"))
     if json.loads(original) == database:
         return 0
-    backup = path.with_name(f"db.pre-dev19-{int(time.time())}.json")
+    backup = path.with_name(f"db.pre-dev20-{int(time.time())}.json")
     shutil.copy2(path, backup)
     os.chmod(backup, 0o600)
-    descriptor, temporary = tempfile.mkstemp(prefix=".db.dev19.", dir=path.parent)
+    descriptor, temporary = tempfile.mkstemp(prefix=".db.dev20.", dir=path.parent)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as target:
             target.write(updated)

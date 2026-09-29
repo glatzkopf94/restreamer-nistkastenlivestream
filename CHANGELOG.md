@@ -1,5 +1,13 @@
 # Changelog
 
+## NKL 1.4 Beta / 0.3.0-dev20
+
+- Synchronize persisted public player sources and DVR configuration before Core starts; preserve player customization.
+- Load HLS only on activation and recover activated players from temporary manifest/network failures after a restart; cancel retries when deactivated.
+- Constrain player settings flex panels and wrap long channel selections; use horizontal tabs on narrow screens.
+- Regression coverage for multiple stale DVR configurations, real Chromium HLS outage/recovery and retry cancellation.
+
+
 ## 0.3.0-dev19 – 2026-09-26 (NKL 1.4 Beta)
 
 - DVR-Startmigration auf das echte Core-Speicherformat `process[id].config.output`
