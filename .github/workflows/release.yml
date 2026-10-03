@@ -78,6 +78,7 @@ jobs:
           python3 tests/test-livechasing-manager.py
           python3 tests/test-dvr-retention.py
           python3 tests/test-player-ui.py
+          python3 tests/test-player-cleanup.py
           node tests/test-player-behavior.js
           python3 -m py_compile scripts/migrate-player-1.4.py
           python3 tests/test-timestamp-repair.py
@@ -151,6 +152,7 @@ jobs:
             sleep 2
           done
           ./tests/smoke-test.sh
+          python3 tests/test-container-restart.py "${{ steps.release.outputs.image }}:${{ steps.release.outputs.release_version }}-${arch}"
 
   publish:
     name: Publish multiarch image and release

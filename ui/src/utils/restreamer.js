@@ -2100,19 +2100,18 @@ class Restreamer {
 		}
 
 		// 4.2 Set hls cleanup filenames
-		const cleanup_global = `${hlsStorage}:/${channel.channelid}**`;
+		// Only media belongs to process cleanup; UUID.html is a persistent player.
+		const cleanup_global = ['.m3u8', '.mp4', '_*.m3u8', '_*.ts', '_*.mp4', '/**.ts', '/**.mp4']
+			.map((suffix) => ({ pattern: `${hlsStorage}:/${channel.channelid}${suffix}`, purge_on_delete: true }));
 		const cleanup_hls_master_playlist = `${hlsStorage}:/${channel.channelid}.m3u8`;
 		const cleanup_hls_fmp4_init_filename = `${hlsStorage}:/${channel.channelid}.mp4`;
 		const cleanup_hls_segment_playlist = `${hlsStorage}:/${segmentPlaylistPath}.m3u8`;
 		const cleanup_hls_segment_filename = `${hlsStorage}:/${cleanupSegmentFilePath}.` + (!control.hls.lhls && control.hls.version === 7 ? 'mp4' : 'ts');
 
-		// 4.3 Cleanup id* (process is deleted) + continuously hls_segment_playlist and hls_segment_filename
+		// 4.3 Cleanup channel media (process is deleted) + continuously hls_segment_playlist and hls_segment_filename
 		if (control.hls.cleanup === true) {
 			output.cleanup.push(
-				{
-					pattern: cleanup_global,
-					purge_on_delete: true,
-				},
+				...cleanup_global,
 				{
 					pattern: cleanup_hls_segment_playlist,
 					max_file_age_seconds: parseInt(control.hls.listSize) > 0 ? parseInt(control.hls.segmentDuration) * (parseInt(control.hls.listSize) + 6) : 0,

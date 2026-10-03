@@ -166,3 +166,27 @@ func TestUnsetCleanup(t *testing.T) {
 
 	cleanfs.Stop()
 }
+
+// Detaching shutdown rules must preserve persistent player and DVR files.
+func TestClearCleanupPreservesFiles(t *testing.T) {
+	memfs, _ := fs.NewMemFilesystem(fs.MemConfig{})
+	cleanfs := New(Config{FS: memfs})
+	patterns := []Pattern{{Pattern: "/channel**", PurgeOnDelete: true}}
+	cleanfs.SetCleanup("ingest", patterns)
+	cleanfs.WriteFileReader("/channel.html", strings.NewReader("player"))
+	cleanfs.WriteFileReader("/channel_output_0.m3u8", strings.NewReader("playlist"))
+	cleanfs.WriteFileReader("/channel/output_0/segment.ts", strings.NewReader("segment"))
+	cleanfs.ClearCleanup("ingest")
+	require.Equal(t, int64(3), cleanfs.Files())
+	// Cleared rules must not accumulate across Start/Stop cycles.
+	cleanfs.UnsetCleanup("ingest")
+	require.Equal(t, int64(3), cleanfs.Files())
+	// Explicit process deletion still purges its media, never the public page.
+	cleanfs.SetCleanup("ingest", []Pattern{
+		{Pattern: "/channel_*.m3u8", PurgeOnDelete: true},
+		{Pattern: "/channel/**.ts", PurgeOnDelete: true},
+	})
+	cleanfs.UnsetCleanup("ingest")
+	require.Equal(t, int64(1), cleanfs.Files())
+	require.Equal(t, "/channel.html", cleanfs.List("/", "/*.html")[0].Name())
+}

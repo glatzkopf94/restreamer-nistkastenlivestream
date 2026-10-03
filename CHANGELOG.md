@@ -1,5 +1,12 @@
 # Changelog
 
+## NKL 1.4 Beta / 0.3.0-dev21
+
+- Detach cleanup rules without purging persisted files during Core shutdown.
+- Restrict HLS purge patterns to media; migrate legacy saved rules with a backup.
+- Recover missing generated player HTML from saved metadata and config.js at startup, including the first upgrade from older Core images.
+- Verify two real container restarts and explicit media deletion on both native release architectures.
+
 ## NKL 1.4 Beta / 0.3.0-dev20
 
 - Synchronize persisted public player sources and DVR configuration before Core starts; preserve player customization.

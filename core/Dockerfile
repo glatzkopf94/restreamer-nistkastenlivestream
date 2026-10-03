@@ -15,6 +15,8 @@ RUN apk add \
 	make
 
 RUN cd /dist/core && \
+	go test ./restream -run TestShutdownDoesNotPurgePersistentFiles && \
+	go test ./restream/fs && \
 	go test ./ffmpeg/skills && \
 	go test ./app/ffmigrate && \
 	go test ./http/middleware/session && \

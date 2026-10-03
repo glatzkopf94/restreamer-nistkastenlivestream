@@ -28,6 +28,9 @@ type Filesystem interface {
 	// SetCleanup
 	SetCleanup(id string, patterns []Pattern)
 
+	// ClearCleanup detaches rules without deleting persisted files (shutdown).
+	ClearCleanup(id string)
+
 	// UnsetCleanup
 	UnsetCleanup(id string)
 
@@ -115,6 +118,12 @@ func (rfs *filesystem) SetCleanup(id string, patterns []Pattern) {
 	defer rfs.cleanupLock.Unlock()
 
 	rfs.cleanupPatterns[id] = append(rfs.cleanupPatterns[id], patterns...)
+}
+
+func (rfs *filesystem) ClearCleanup(id string) {
+	rfs.cleanupLock.Lock()
+	defer rfs.cleanupLock.Unlock()
+	delete(rfs.cleanupPatterns, id)
 }
 
 func (rfs *filesystem) UnsetCleanup(id string) {

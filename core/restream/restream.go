@@ -212,7 +212,10 @@ func (r *restream) Stop() {
 				t.ffmpeg.Stop(true)
 			}
 
-			r.unsetCleanup(id)
+			// Shutdown is not process deletion: keep DVR and public files.
+			for _, filesystem := range r.fs.list {
+				filesystem.ClearCleanup(id)
+			}
 		}
 
 		r.fs.stopObserver()
