@@ -190,3 +190,50 @@ func TestClearCleanupPreservesFiles(t *testing.T) {
 	require.Equal(t, int64(1), cleanfs.Files())
 	require.Equal(t, "/channel.html", cleanfs.List("/", "/*.html")[0].Name())
 }
+
+// Large DVR archives must be traversed once per pass, not once per rule.
+type countedFilesystem struct {
+	fs.Filesystem
+	lists    int
+	removals map[string]int
+}
+
+func (f *countedFilesystem) List(path, pattern string) []fs.FileInfo {
+	f.lists++
+	return f.Filesystem.List(path, pattern)
+}
+func (f *countedFilesystem) Remove(path string) int64 {
+	f.removals[path]++
+	return f.Filesystem.Remove(path)
+}
+func TestCleanupSharesSnapshotAndSkipsPurgeOnly(t *testing.T) {
+	mem, _ := fs.NewMemFilesystem(fs.MemConfig{})
+	counted := &countedFilesystem{Filesystem: mem, removals: make(map[string]int)}
+	clean := New(Config{FS: counted}).(*filesystem)
+	clean.SetCleanup("player", []Pattern{{Pattern: "/a**.m3u8", PurgeOnDelete: true}})
+	clean.cleanup()
+	require.Zero(t, counted.lists)
+	for _, name := range []string{"/a/1.ts", "/a/2.ts", "/b/1.ts", "/b/2.ts", "/a.html", "/a.m3u8"} {
+		_, _, err := mem.WriteFileReader(name, strings.NewReader("data"))
+		require.NoError(t, err)
+	}
+	clean.SetCleanup("a", []Pattern{{Pattern: "/a/**.ts", MaxFiles: 1, PurgeOnDelete: true}})
+	clean.SetCleanup("b", []Pattern{{Pattern: "/b/**.ts", MaxFiles: 1, PurgeOnDelete: true}})
+	clean.cleanup()
+	require.Equal(t, 1, counted.lists)
+	require.Len(t, mem.List("/", "/a/**.ts"), 1)
+	require.Len(t, mem.List("/", "/b/**.ts"), 1)
+	require.Len(t, mem.List("/", "/*.html"), 1)
+	require.Len(t, mem.List("/", "/*.m3u8"), 1)
+	clean.SetCleanup("a", []Pattern{{Pattern: "/a/**", PurgeOnDelete: true}})
+	counted.lists = 0
+	counted.removals = make(map[string]int)
+	clean.UnsetCleanup("a")
+	require.Equal(t, 1, counted.lists)
+	for _, count := range counted.removals {
+		require.Equal(t, 1, count)
+	}
+	require.Empty(t, mem.List("/", "/a/**.ts"))
+	require.Len(t, mem.List("/", "/b/**.ts"), 1)
+	require.Len(t, mem.List("/", "/*.html"), 1)
+}

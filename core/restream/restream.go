@@ -518,6 +518,7 @@ func (r *restream) createTask(config *app.Config) (*task, error) {
 }
 
 func (r *restream) setCleanup(id string, config *app.Config) {
+	patterns := make(map[string][]rfs.Pattern)
 	rePrefix := regexp.MustCompile(`^([a-z]+):`)
 
 	for _, output := range config.Output {
@@ -548,12 +549,17 @@ func (r *restream) setCleanup(id string, config *app.Config) {
 					PurgeOnDelete: c.PurgeOnDelete,
 				}
 
-				fs.SetCleanup(id, []rfs.Pattern{
-					pattern,
-				})
+				patterns[name] = append(patterns[name], pattern)
 
 				break
 			}
+		}
+	}
+	// Register all rules together so a periodic cleanup cannot run between
+	// individual rules and repeatedly block the process update.
+	for _, fs := range r.fs.list {
+		if group := patterns[fs.Name()]; len(group) != 0 {
+			fs.SetCleanup(id, group)
 		}
 	}
 }

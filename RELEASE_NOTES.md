@@ -1,10 +1,13 @@
-# NKL 1.4 Beta / 0.3.0-dev21
+# NKL 1.4 Beta / 0.3.0-dev22
 
-- Dauerhafter Fix für verschwundene Playerseiten nach einem Container-/Core-Neustart: Herunterfahren entfernt nur die Bereinigungsregeln, ohne Dateien wie bei einer Kanallöschung zu löschen. DVR-Aufzeichnungen bleiben beim Neustart erhalten.
-- Neue und gespeicherte Kanalregeln bereinigen ausschließlich HLS-Mediendateien. Die alte breite UUID-Regel, die auch Player-HTML erfasste, wird vor dem Core-Start mit Datenbanksicherung migriert. Die laufende DVR-Bereinigung bleibt aktiv.
-- Bereits fehlende generierte Playerseiten werden beim Start aus vorhandener config.js und gespeicherten Kanalmetadaten wiederhergestellt. Bestehende Seiten, eigene Poster und Player-Einstellungen bleiben erhalten. Das deckt auch den Übergang ab, wenn die alte Version beim Update noch HTML löscht.
-- Native Image-Tests prüfen auf AMD64 und ARM64 die Reparatur einer alten Installation, zwei echte Container-Neustarts und die weiterhin funktionierende Medienbereinigung beim expliziten Löschen eines Kanals.
+Behebt lange Wartezeiten und HTTP 504 beim Speichern eines Players nach dem Löschen von DVR-Inhalten. Die Prozessaktualisierung wartete auf wiederholte vollständige Verzeichnisdurchläufe der Bereinigung.
 
-Das Installations-ZIP gilt für beide Architekturen. Auf einem Raspberry Pi 5 ist ein 64-Bit-System erforderlich.
+- Ein gemeinsamer Dateiverzeichnisdurchlauf je Bereinigungsrunde.
+- Reine Löschregeln lösen keine periodischen Verzeichnisdurchläufe mehr aus.
+- Suchmuster werden einmal pro Regel kompiliert.
+- Bereinigungsregeln eines Kanals werden gemeinsam registriert.
+- DVR-Haltezeiten und gezielte Löschung bleiben aktiv; Playerdateien bleiben geschützt.
 
-Image: `ghcr.io/glatzkopf94/restreamer-nistkastenlivestream:0.3.0-dev21`
+Verfügbar für linux/amd64 und linux/arm64. Keine Zeitrafferfunktion in diesem Release.
+
+Validierung: Go-Tests für Bereinigung, Prozessaktualisierung, Stop und Neustart; native Container-Smoke-Tests für beide Architekturen im Release-Workflow.
